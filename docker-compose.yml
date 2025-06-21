@@ -1,0 +1,70 @@
+services:
+  listener:
+    build:
+      context: ./PacketVisionListener
+    container_name: pvL
+    ports:
+      - "20777:20777/udp"
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: mysql:8
+    container_name: pvDB
+    environment:
+      MYSQL_DATABASE: PACKETVISION
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpass
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./PacketVisionMySQLDump:/db-dump
+    ports:
+      - "3306:3306"
+    restart: always
+
+  web:
+    build: ./PacketVisionWeb
+    container_name: pvW
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    restart: always
+
+  websocket:
+    build: ./PacketVisionWebSocket
+    container_name: pvWS
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: pvPHPMA
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpass
+    depends_on:
+      - db
+    restart: always
+  
+  grafana:
+    image: grafana/grafana
+    container_name: pvG
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - db
+    restart: always
+    
+volumes:
+  grafana-storage:

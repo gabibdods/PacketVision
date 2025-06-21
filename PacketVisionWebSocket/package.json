@@ -1,0 +1,16 @@
+{
+  "name": "pvwebsocket",
+  "version": "1.0.0",
+  "description": "",
+  "main": "websocket.js",
+  "scripts": {
+    "start": "node websocket.js"
+  },
+  "dependencies": {
+    "mysql2": "^3.7.0",
+    "ws": "^8.15.0"
+  },
+  "author": "Gabi",
+  "license": "MIT",
+  "keywords": []
+}
