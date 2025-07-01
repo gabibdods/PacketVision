@@ -2,6 +2,7 @@ services:
   listener:
     build:
       context: ./PacketVisionListener
+      dockerfile: Dockerfile
     container_name: pvL
     ports:
       - "20777:20777/udp"
@@ -19,7 +20,7 @@ services:
       MYSQL_PASSWORD: mysqlpass
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./PacketVisionMySQLDump:/db-dump
+      - ./PacketVisionMySQLDump:/PacketVisionMySQLDump
     ports:
       - "3306:3306"
     restart: always
@@ -68,3 +69,4 @@ services:
     
 volumes:
   grafana-storage:
+  mysql_data:

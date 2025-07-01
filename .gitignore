@@ -24,7 +24,6 @@
 !/PacketVisionWebSocket/Nodejs/
 !/PacketVisionWebSocket/Nodejs/**
 
-!/.gitignore
 !/docker-compose.yml
 !/Dockerfile
 !/init.sql

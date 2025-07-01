@@ -9,9 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="faster.Worker.cs" />
-    <Compile Remove="new.Worker.cs" />
-    <Compile Remove="newer.Worker.cs" />
 	<PackageReference Include="MySqlConnector" Version="2.3.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

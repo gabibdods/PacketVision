@@ -16,106 +16,26 @@ namespace PacketVisionListener
             {
                 UdpReceiveResult result = await client.ReceiveAsync();
                 var packet = result.Buffer;
-/* debug **     Console.WriteLine($"L:{packet.Length}"); */
 
                 using var ms = new MemoryStream(packet);
                 using var br = new BinaryReader(ms);
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Inserters
-                if (packet.Length == 1352)
-                {//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of PacketCarTelemetryData of 1352B
-                    Header headerCarTelemetry = new Header
-                    {
-                        packetFormat = br.ReadUInt16(),
-                        gameYear = br.ReadByte(),
-                        gameMajorVersion = br.ReadByte(),
-                        gameMinorVersion = br.ReadByte(),
-                        packetVersion = br.ReadByte(),
-                        packetId = br.ReadByte(),
-                        sessionUID = br.ReadUInt64(),
-                        sessionTime = br.ReadSingle(),
-                        frameIdentifier = br.ReadUInt32(),
-                        overallFrameIdentifier = br.ReadUInt32(),
-                        playerCarIndex = br.ReadByte(),
-                        secondaryPlayerCarIndex = br.ReadByte()
-                    };
-                    CarTelemetry[] carTelemetry = new CarTelemetry[22];
-                    for (int i = 0; i < 22; i++)
-                    {
-                        carTelemetry[i] = ReadCarTelemetry(br);
-                    }
-                    byte mfdPanelIndex = br.ReadByte();                                     // 0�4 or 255
-                    byte mfdPanelIndexSecondaryPlayer = br.ReadByte();                      // 0�4 or 255
-                    sbyte suggestedGear = br.ReadSByte();                                   // -1, 0 = none, 1�8
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    var dataCarTelemetry = carTelemetry[headerCarTelemetry.playerCarIndex];
+                if (packet.Length == 1349)
+                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarMotion of 1349B
                     
-                    using var conn = new MySqlConnection(connectionString);
-                    await conn.OpenAsync();
-
-                    using var cmd = new MySqlCommand(@"
-                        INSERT INTO CARTELEMETRY (
-                            speed, throttle, steer, brake, clutch, gear, engineRPM, drs, revLightsPercent, revLightsBitValue,
-                            brakesTemperature0, brakesTemperature1, brakesTemperature2, brakesTemperature3,
-                            tyresSurfaceTemperature0, tyresSurfaceTemperature1, tyresSurfaceTemperature2, tyresSurfaceTemperature3,
-                            tyresInnerTemperature0, tyresInnerTemperature1, tyresInnerTemperature2, tyresInnerTemperature3,
-                            engineTemperature,
-                            tyresPressure0, tyresPressure1, tyresPressure2, tyresPressure3,
-                            surfaceType0, surfaceType1, surfaceType2, surfaceType3
-                        ) VALUES (
-                            @speed, @throttle, @steer, @brake, @clutch, @gear, @engineRPM, @drs, @revLightsPercent, @revLightsBitValue,
-                            @brakesTemperature0, @brakesTemperature1, @brakesTemperature2, @brakesTemperature3,
-                            @tyresSurfaceTemperature0, @tyresSurfaceTemperature1, @tyresSurfaceTemperature2, @tyresSurfaceTemperature3,
-                            @tyresInnerTemperature0, @tyresInnerTemperature1, @tyresInnerTemperature2, @tyresInnerTemperature3,
-                            @engineTemperature,
-                            @tyresPressure0, @tyresPressure1, @tyresPressure2, @tyresPressure3,
-                            @surfaceType0, @surfaceType1, @surfaceType2, @surfaceType3
-                        )", conn
-                    );
-                    cmd.Parameters.AddWithValue("@speed", dataCarTelemetry.speed);
-                    cmd.Parameters.AddWithValue("@throttle", dataCarTelemetry.throttle);
-                    cmd.Parameters.AddWithValue("@steer", dataCarTelemetry.steer);
-                    cmd.Parameters.AddWithValue("@brake", dataCarTelemetry.brake);
-                    cmd.Parameters.AddWithValue("@clutch", dataCarTelemetry.clutch);
-                    cmd.Parameters.AddWithValue("@gear", dataCarTelemetry.gear);
-                    cmd.Parameters.AddWithValue("@engineRPM", dataCarTelemetry.engineRPM);
-                    cmd.Parameters.AddWithValue("@drs", dataCarTelemetry.drs);
-                    cmd.Parameters.AddWithValue("@revLightsPercent", dataCarTelemetry.revLightsPercent);
-                    cmd.Parameters.AddWithValue("@revLightsBitValue", dataCarTelemetry.revLightsBitValue);
-                    cmd.Parameters.AddWithValue("@brakesTemperature0", dataCarTelemetry.brakesTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature1", dataCarTelemetry.brakesTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature2", dataCarTelemetry.brakesTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature3", dataCarTelemetry.brakesTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature0", dataCarTelemetry.tyresSurfaceTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature1", dataCarTelemetry.tyresSurfaceTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature2", dataCarTelemetry.tyresSurfaceTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature3", dataCarTelemetry.tyresSurfaceTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature0", dataCarTelemetry.tyresInnerTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature1", dataCarTelemetry.tyresInnerTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature2", dataCarTelemetry.tyresInnerTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature3", dataCarTelemetry.tyresInnerTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@engineTemperature", dataCarTelemetry.engineTemperature);
-                    cmd.Parameters.AddWithValue("@tyresPressure0", dataCarTelemetry.tyresPressure?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure1", dataCarTelemetry.tyresPressure?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure2", dataCarTelemetry.tyresPressure?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure3", dataCarTelemetry.tyresPressure?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType0", dataCarTelemetry.surfaceType?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType1", dataCarTelemetry.surfaceType?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType2", dataCarTelemetry.surfaceType?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType3", dataCarTelemetry.surfaceType?[3] ?? 0);
-                    try
-                    {
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"CARTELEMETRY INSERT error : {ex}");
-                        continue;
-                    }
-                    continue;
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("CarMotion");
                 }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                if (packet.Length == 753)
-                {//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of PacketSessionData of 753B
+                else if (packet.Length == 753)
+                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Session of 753B
                     Header headerSession = new Header
                     {
                         packetFormat = br.ReadUInt16(),
@@ -131,8 +51,9 @@ namespace PacketVisionListener
                         playerCarIndex = br.ReadByte(),
                         secondaryPlayerCarIndex = br.ReadByte()
                     };
-                    var dataSession = ReadSession(br);
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    var dataSession = ReadSession(br);
+                    
                     using var conn = new MySqlConnection(connectionString);
                     await conn.OpenAsync();
 
@@ -241,7 +162,9 @@ namespace PacketVisionListener
                             weekendStructure8,
                             weekendStructure9,
                             weekendStructure10,
-                            weekendStructure11
+                            weekendStructure11,
+                            sector2LapDistanceStart,
+                            sector3LapDistanceStart
                         ) VALUES (
                             @weather, @trackTemperature, @airTemperature, @totalLaps, @trackLength, @sessionType, @trackId, @formula, @sessionTimeLeft, @sessionDuration, @pitSpeedLimit, @gamePaused, @isSpectating, @spectatorCarIndex, @sliProNativeSupport,
                             @numMarshalZones,
@@ -348,7 +271,9 @@ namespace PacketVisionListener
                             @weekendStructure8,
                             @weekendStructure9,
                             @weekendStructure10,
-                            @weekendStructure11
+                            @weekendStructure11,
+                            @sector2LapDistanceStart,
+                            @sector3LapDistanceStart
                             )", conn
                     );
                     cmd.Parameters.AddWithValue("@weather", dataSession.weather);
@@ -443,6 +368,8 @@ namespace PacketVisionListener
                     {
                         cmd.Parameters.AddWithValue($"@weekendStructure{i}", dataSession.weekendStructure[i]);
                     }
+                    cmd.Parameters.AddWithValue("@sector2LapDistanceStart", dataSession.sector2LapDistanceStart);
+                    cmd.Parameters.AddWithValue("@sector3LapDistanceStart", dataSession.sector3LapDistanceStart);
                     try
                     {
                         await cmd.ExecuteNonQueryAsync();
@@ -454,66 +381,303 @@ namespace PacketVisionListener
                     }
                     continue;
                 }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1285)
+                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Lap of 1285B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("Lap");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 45)
+                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Event of 45B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("Event");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1350)
+                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Participants of 1350B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("Participants");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1133)
+                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarSetup of 1133B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("CarSetup");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1352)
+                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarTelemetry of 1352B
+                    Header headerCarTelemetry = new Header
+                    {
+                        packetFormat = br.ReadUInt16(),
+                        gameYear = br.ReadByte(),
+                        gameMajorVersion = br.ReadByte(),
+                        gameMinorVersion = br.ReadByte(),
+                        packetVersion = br.ReadByte(),
+                        packetId = br.ReadByte(),
+                        sessionUID = br.ReadUInt64(),
+                        sessionTime = br.ReadSingle(),
+                        frameIdentifier = br.ReadUInt32(),
+                        overallFrameIdentifier = br.ReadUInt32(),
+                        playerCarIndex = br.ReadByte(),
+                        secondaryPlayerCarIndex = br.ReadByte()
+                    };
+                    CarTelemetry[] carTelemetry = new CarTelemetry[22];
+                    for (int i = 0; i < 22; i++)
+                    {
+                        carTelemetry[i] = ReadCarTelemetry(br);
+                    }
+                    byte mfdPanelIndex = br.ReadByte();
+                    byte mfdPanelIndexSecondaryPlayer = br.ReadByte();
+                    sbyte suggestedGear = br.ReadSByte();
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    var dataCarTelemetry = carTelemetry[headerCarTelemetry.playerCarIndex];
+                    
+                    using var conn = new MySqlConnection(connectionString);
+                    await conn.OpenAsync();
+
+                    using var cmd = new MySqlCommand(@"
+                        INSERT INTO CARTELEMETRY (
+                            speed, throttle, steer, brake, clutch, gear, engineRPM, drs, revLightsPercent, revLightsBitValue,
+                            brakesTemperature0, brakesTemperature1, brakesTemperature2, brakesTemperature3,
+                            tyresSurfaceTemperature0, tyresSurfaceTemperature1, tyresSurfaceTemperature2, tyresSurfaceTemperature3,
+                            tyresInnerTemperature0, tyresInnerTemperature1, tyresInnerTemperature2, tyresInnerTemperature3,
+                            engineTemperature,
+                            tyresPressure0, tyresPressure1, tyresPressure2, tyresPressure3,
+                            surfaceType0, surfaceType1, surfaceType2, surfaceType3
+                        ) VALUES (
+                            @speed, @throttle, @steer, @brake, @clutch, @gear, @engineRPM, @drs, @revLightsPercent, @revLightsBitValue,
+                            @brakesTemperature0, @brakesTemperature1, @brakesTemperature2, @brakesTemperature3,
+                            @tyresSurfaceTemperature0, @tyresSurfaceTemperature1, @tyresSurfaceTemperature2, @tyresSurfaceTemperature3,
+                            @tyresInnerTemperature0, @tyresInnerTemperature1, @tyresInnerTemperature2, @tyresInnerTemperature3,
+                            @engineTemperature,
+                            @tyresPressure0, @tyresPressure1, @tyresPressure2, @tyresPressure3,
+                            @surfaceType0, @surfaceType1, @surfaceType2, @surfaceType3
+                        )", conn
+                    );
+                    cmd.Parameters.AddWithValue("@speed", dataCarTelemetry.speed);
+                    cmd.Parameters.AddWithValue("@throttle", dataCarTelemetry.throttle);
+                    cmd.Parameters.AddWithValue("@steer", dataCarTelemetry.steer);
+                    cmd.Parameters.AddWithValue("@brake", dataCarTelemetry.brake);
+                    cmd.Parameters.AddWithValue("@clutch", dataCarTelemetry.clutch);
+                    cmd.Parameters.AddWithValue("@gear", dataCarTelemetry.gear);
+                    cmd.Parameters.AddWithValue("@engineRPM", dataCarTelemetry.engineRPM);
+                    cmd.Parameters.AddWithValue("@drs", dataCarTelemetry.drs);
+                    cmd.Parameters.AddWithValue("@revLightsPercent", dataCarTelemetry.revLightsPercent);
+                    cmd.Parameters.AddWithValue("@revLightsBitValue", dataCarTelemetry.revLightsBitValue);
+                    cmd.Parameters.AddWithValue("@brakesTemperature0", dataCarTelemetry.brakesTemperature?[0] ?? 0);
+                    cmd.Parameters.AddWithValue("@brakesTemperature1", dataCarTelemetry.brakesTemperature?[1] ?? 0);
+                    cmd.Parameters.AddWithValue("@brakesTemperature2", dataCarTelemetry.brakesTemperature?[2] ?? 0);
+                    cmd.Parameters.AddWithValue("@brakesTemperature3", dataCarTelemetry.brakesTemperature?[3] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature0", dataCarTelemetry.tyresSurfaceTemperature?[0] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature1", dataCarTelemetry.tyresSurfaceTemperature?[1] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature2", dataCarTelemetry.tyresSurfaceTemperature?[2] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature3", dataCarTelemetry.tyresSurfaceTemperature?[3] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresInnerTemperature0", dataCarTelemetry.tyresInnerTemperature?[0] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresInnerTemperature1", dataCarTelemetry.tyresInnerTemperature?[1] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresInnerTemperature2", dataCarTelemetry.tyresInnerTemperature?[2] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresInnerTemperature3", dataCarTelemetry.tyresInnerTemperature?[3] ?? 0);
+                    cmd.Parameters.AddWithValue("@engineTemperature", dataCarTelemetry.engineTemperature);
+                    cmd.Parameters.AddWithValue("@tyresPressure0", dataCarTelemetry.tyresPressure?[0] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresPressure1", dataCarTelemetry.tyresPressure?[1] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresPressure2", dataCarTelemetry.tyresPressure?[2] ?? 0);
+                    cmd.Parameters.AddWithValue("@tyresPressure3", dataCarTelemetry.tyresPressure?[3] ?? 0);
+                    cmd.Parameters.AddWithValue("@surfaceType0", dataCarTelemetry.surfaceType?[0] ?? 0);
+                    cmd.Parameters.AddWithValue("@surfaceType1", dataCarTelemetry.surfaceType?[1] ?? 0);
+                    cmd.Parameters.AddWithValue("@surfaceType2", dataCarTelemetry.surfaceType?[2] ?? 0);
+                    cmd.Parameters.AddWithValue("@surfaceType3", dataCarTelemetry.surfaceType?[3] ?? 0);
+                    try
+                    {
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"CARTELEMETRY INSERT error : {ex}");
+                        continue;
+                    }
+                    continue;
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1239)
+                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarStatus of 1239B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("CarStatus");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1020)
+                {//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of FinalClassification of 1020B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("FinalClassification");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1306)
+                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of LobbyInfo of 1306B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("LobbyInfo");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 953)
+                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarDamage of 953B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("CarDamage");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 1460)
+                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of SessionHistory of 1460B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("SessionHistory");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 231)
+                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TyreSet of 231B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("TyreSet");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 237)
+                {//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of MotionEx of 237B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("MotionEx");
+                }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                else if (packet.Length == 101)
+                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TimeTrial of 101B
+                    
+                    
+                    
+                    
+                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                    
+                    
+                    
+                    
+                    Console.WriteLine("TimeTrial");
+                }
+                else
+                {
+                    Console.WriteLine(packet.Length);
+                }
             }
         }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Readers
-        private CarTelemetry ReadCarTelemetry(BinaryReader br)
+        private CarMotion ReadCarMotion(BinaryReader br)
         {
-            CarTelemetry carTelemetry = new();
+            CarMotion carMotion = new();
             try
             {
-                carTelemetry.speed = br.ReadUInt16();
-                carTelemetry.throttle = br.ReadSingle();
-                carTelemetry.steer = br.ReadSingle();
-                carTelemetry.brake = br.ReadSingle();
-                carTelemetry.clutch = br.ReadByte();
-                carTelemetry.gear = br.ReadSByte();
-                carTelemetry.engineRPM = br.ReadUInt16();
-                carTelemetry.drs = br.ReadByte();
-                carTelemetry.revLightsPercent = br.ReadByte();
-                carTelemetry.revLightsBitValue = br.ReadUInt16();
-                carTelemetry.brakesTemperature = new ushort[]
-                {
-                    br.ReadUInt16(),
-                    br.ReadUInt16(),
-                    br.ReadUInt16(),
-                    br.ReadUInt16()
-                };
-                carTelemetry.tyresSurfaceTemperature = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
-                carTelemetry.tyresInnerTemperature = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
-                carTelemetry.engineTemperature = br.ReadUInt16();
-                carTelemetry.tyresPressure = new float[]
-                {
-                    br.ReadSingle(),
-                    br.ReadSingle(),
-                    br.ReadSingle(),
-                    br.ReadSingle()
-                };
-                carTelemetry.surfaceType = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
+                carMotion.worldPositionX = br.ReadSingle();
+                carMotion.worldPositionY = br.ReadSingle();
+                carMotion.worldPositionZ = br.ReadSingle();
+                carMotion.worldVelocityX = br.ReadSingle();
+                carMotion.worldVelocityY = br.ReadSingle();
+                carMotion.worldVelocityZ = br.ReadSingle();
+                carMotion.worldForwardDirX = br.ReadInt16();
+                carMotion.worldForwardDirY = br.ReadInt16();
+                carMotion.worldForwardDirZ = br.ReadInt16();
+                carMotion.worldRightDirX = br.ReadInt16();
+                carMotion.worldRightDirY = br.ReadInt16();
+                carMotion.worldRightDirZ = br.ReadInt16();
+                carMotion.gForceLateral = br.ReadSingle();
+                carMotion.gForceLongitudinal = br.ReadSingle();
+                carMotion.gForceVertical = br.ReadSingle();
+                carMotion.yaw = br.ReadSingle();
+                carMotion.pitch = br.ReadSingle();
+                carMotion.roll = br.ReadSingle();
             }
             catch (EndOfStreamException)
             {
-                Console.WriteLine("carTelemetry Packet unreadable");
+                Console.WriteLine("carMotion Packet unreadable");
             }
-            return carTelemetry;
+            return carMotion;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         private Session ReadSession(BinaryReader br)
@@ -543,8 +707,6 @@ namespace PacketVisionListener
                     session.marshalZones[i].zoneStart = br.ReadSingle();
                     session.marshalZones[i].zoneFlag = br.ReadSByte();
                 }
-
-                ;
                 session.safetyCarStatus = br.ReadByte();
                 session.networkGame = br.ReadByte();
                 session.numWeatherForecastSamples = br.ReadByte();
@@ -560,8 +722,6 @@ namespace PacketVisionListener
                     session.weatherForecastSamples[i].airTemperatureChange = br.ReadSByte();
                     session.weatherForecastSamples[i].rainPercentage = br.ReadByte();
                 }
-
-                ;
                 session.forecastAccuracy = br.ReadByte();
                 session.aiDifficulty = br.ReadByte();
                 session.seasonLinkIdentifier = br.ReadUInt32();
@@ -631,12 +791,514 @@ namespace PacketVisionListener
                     br.ReadByte(),
 
                 };
+                session.sector2LapDistanceStart = br.ReadSingle();
+                session.sector3LapDistanceStart = br.ReadSingle();
             }
             catch (EndOfStreamException)
             {
                 Console.WriteLine("session Packet unreadable");
             }
             return session;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private Lap ReadLap(BinaryReader br)
+        {
+            Lap lap = new();
+            try
+            {
+                lap.lastLapTimeInMS = br.ReadUInt32();
+                lap.currentLapTimeInMS = br.ReadUInt32();
+                lap.sector1TimeMSPart = br.ReadUInt16();
+                lap.sector1TimeMinutesPart = br.ReadByte();
+                lap.sector2TimeMSPart = br.ReadUInt16();
+                lap.sector2TimeMinutesPart = br.ReadByte();
+                lap.deltaToCarInFrontMSPart = br.ReadUInt16();
+                lap.deltaToCarInFrontMinutesPart = br.ReadByte();
+                lap.deltaToRaceLeaderMSPart = br.ReadUInt16();
+                lap.deltaToRaceLeaderMinutesPart = br.ReadByte();
+                lap.lapDistance = br.ReadSingle();
+                lap.totalDistance = br.ReadSingle();
+                lap.safetyCarDelta = br.ReadSingle();
+                lap.carPosition = br.ReadByte();
+                lap.currentLapNum = br.ReadByte();
+                lap.pitStatus = br.ReadByte();
+                lap.numPitStops = br.ReadByte();
+                lap.sector = br.ReadByte();
+                lap.currentLapInvalid = br.ReadByte();
+                lap.penalties = br.ReadByte();
+                lap.totalWarnings = br.ReadByte();
+                lap.cornerCuttingWarnings = br.ReadByte();
+                lap.numUnservedDriveThroughPens = br.ReadByte();
+                lap.numUnservedStopGoPens = br.ReadByte();
+                lap.gridPosition = br.ReadByte();
+                lap.driverStatus = br.ReadByte();
+                lap.resultStatus = br.ReadByte();
+                lap.pitLaneTimerActive = br.ReadByte();
+                lap.pitLaneTimeInLaneInMS = br.ReadUInt16();
+                lap.pitStopTimerInMS = br.ReadUInt16();
+                lap.pitStopShouldServePen = br.ReadByte();
+                lap.speedTrapFastestSpeed = br.ReadSingle();
+                lap.speedTrapFastestLap = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("lap Packet unreadable");
+            }
+            return lap;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private Event ReadEvent(BinaryReader br)
+        {
+            Event evenT = new();
+            try
+            {
+                evenT.eventStringCode = br.ReadBytes(4);
+                string eventCode = System.Text.Encoding.ASCII.GetString(evenT.eventStringCode);
+                switch (eventCode)
+                {
+                    case "FTLP":
+                        evenT.eventDetails.FastestLap.vehicleIdx = br.ReadByte();
+                        evenT.eventDetails.FastestLap.lapTime = br.ReadSingle();
+                        break;
+                    case "RTMT":
+                        evenT.eventDetails.Retirement.vehicleIdx = br.ReadByte();
+                        break;
+                    case "TMPT":
+                        evenT.eventDetails.TeamMateInPits.vehicleIdx = br.ReadByte();
+                        break;
+                    case "RCWN":
+                        evenT.eventDetails.RaceWinner.vehicleIdx = br.ReadByte();
+                        break;
+                    case "PENA":
+                        evenT.eventDetails.Penalty.penaltyType = br.ReadByte();
+                        evenT.eventDetails.Penalty.infringementType = br.ReadByte();
+                        evenT.eventDetails.Penalty.vehicleIdx = br.ReadByte();
+                        evenT.eventDetails.Penalty.otherVehicleIdx = br.ReadByte();
+                        evenT.eventDetails.Penalty.time = br.ReadByte();
+                        evenT.eventDetails.Penalty.lapNum = br.ReadByte();
+                        evenT.eventDetails.Penalty.placesGained = br.ReadByte();
+                        break;
+                    case "SPTP":
+                        evenT.eventDetails.SpeedTrap.vehicleIdx = br.ReadByte();
+                        evenT.eventDetails.SpeedTrap.speed = br.ReadSingle();
+                        evenT.eventDetails.SpeedTrap.isOverallFastestInSession = br.ReadByte();
+                        evenT.eventDetails.SpeedTrap.isDriverFastestInSession = br.ReadByte();
+                        evenT.eventDetails.SpeedTrap.fastestVehicleIdxInSession = br.ReadByte();
+                        evenT.eventDetails.SpeedTrap.fastestSpeedInSession = br.ReadSingle();
+                        break;
+                    case "STLG":
+                        evenT.eventDetails.StartLights.numLights = br.ReadByte();
+                        break;
+                    case "DTSV":
+                        evenT.eventDetails.DriveThroughPenaltyServed.vehicleIdx = br.ReadByte();
+                        break;
+                    case "SGSV":
+                        evenT.eventDetails.StopGoPenaltyServed.vehicleIdx = br.ReadByte();
+                        break;
+                    case "FLBK":
+                        evenT.eventDetails.Flashback.flashbackFrameIdentifier = br.ReadUInt32();
+                        evenT.eventDetails.Flashback.flashbackSessionTime = br.ReadSingle();
+                        break;
+                    case "BUTN":
+                        evenT.eventDetails.Buttons.buttonStatus = br.ReadUInt32();
+                        break;
+                    case "OVTK":
+                        evenT.eventDetails.Overtake.overtakingVehicleIdx = br.ReadByte();
+                        evenT.eventDetails.Overtake.beingOvertakenVehicleIdx = br.ReadByte();
+                        break;
+                    case "SCAR":
+                        evenT.eventDetails.SafetyCar.safetyCarType = br.ReadByte();
+                        evenT.eventDetails.SafetyCar.eventType = br.ReadByte();
+                        break;
+                    case "COLL":
+                        evenT.eventDetails.Collision.vehicle1Idx = br.ReadByte();
+                        evenT.eventDetails.Collision.vehicle2Idx = br.ReadByte();
+                        break;
+                    default:
+                        break; // Other events like SSTA, SEND, DRSE, DRSD, CHQF, LGOT, RDFL don't carry extra data
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("event Packet unreadable");
+            }
+            return evenT;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private Participants ReadParticipants(BinaryReader br)
+        {
+            Participants participants = new();
+            try
+            {
+                participants.aiControlled = br.ReadByte();
+                participants.driverId = br.ReadByte();
+                participants.networkId = br.ReadByte();
+                participants.teamId = br.ReadByte();
+                participants.myTeam = br.ReadByte();
+                participants.raceNumber = br.ReadByte();
+                participants.nationality = br.ReadByte();
+                participants.name = br.ReadBytes(48);
+                participants.yourTelemetry = br.ReadByte();
+                participants.showOnlineNames = br.ReadByte();
+                participants.techLevel = br.ReadUInt16();
+                participants.platform = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("participants Packet unreadable");
+            }
+            return participants;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private CarSetup ReadCarSetup(BinaryReader br)
+        {
+            CarSetup carSetup = new();
+            try
+            {
+                carSetup.frontWing = br.ReadByte();
+                carSetup.rearWing = br.ReadByte();
+                carSetup.onThrottle = br.ReadByte();
+                carSetup.offThrottle = br.ReadByte();
+                carSetup.frontCamber = br.ReadSingle();
+                carSetup.rearCamber = br.ReadSingle();
+                carSetup.frontToe = br.ReadSingle();
+                carSetup.rearToe = br.ReadSingle();
+                carSetup.frontSuspension = br.ReadByte();
+                carSetup.rearSuspension = br.ReadByte();
+                carSetup.frontAntiRollBar = br.ReadByte();
+                carSetup.rearAntiRollBar = br.ReadByte();
+                carSetup.frontSuspensionHeight = br.ReadByte();
+                carSetup.rearSuspensionHeight = br.ReadByte();
+                carSetup.brakePressure = br.ReadByte();
+                carSetup.brakeBias = br.ReadByte();
+                carSetup.engineBraking = br.ReadByte();
+                carSetup.rearLeftTyrePressure = br.ReadSingle();
+                carSetup.rearRightTyrePressure = br.ReadSingle();
+                carSetup.frontLeftTyrePressure = br.ReadSingle();
+                carSetup.frontRightTyrePressure = br.ReadSingle();
+                carSetup.ballast = br.ReadByte();
+                carSetup.fuelLoad = br.ReadSingle();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("carSetup Packet unreadable");
+            }
+            return carSetup;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private CarTelemetry ReadCarTelemetry(BinaryReader br)
+        {
+            CarTelemetry carTelemetry = new();
+            try
+            {
+                carTelemetry.speed = br.ReadUInt16();
+                carTelemetry.throttle = br.ReadSingle();
+                carTelemetry.steer = br.ReadSingle();
+                carTelemetry.brake = br.ReadSingle();
+                carTelemetry.clutch = br.ReadByte();
+                carTelemetry.gear = br.ReadSByte();
+                carTelemetry.engineRPM = br.ReadUInt16();
+                carTelemetry.drs = br.ReadByte();
+                carTelemetry.revLightsPercent = br.ReadByte();
+                carTelemetry.revLightsBitValue = br.ReadUInt16();
+                carTelemetry.brakesTemperature = new ushort[]
+                {
+                    br.ReadUInt16(),
+                    br.ReadUInt16(),
+                    br.ReadUInt16(),
+                    br.ReadUInt16()
+                };
+                carTelemetry.tyresSurfaceTemperature = new byte[]
+                {
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte()
+                };
+                carTelemetry.tyresInnerTemperature = new byte[]
+                {
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte()
+                };
+                carTelemetry.engineTemperature = br.ReadUInt16();
+                carTelemetry.tyresPressure = new float[]
+                {
+                    br.ReadSingle(),
+                    br.ReadSingle(),
+                    br.ReadSingle(),
+                    br.ReadSingle()
+                };
+                carTelemetry.surfaceType = new byte[]
+                {
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte(),
+                    br.ReadByte()
+                };
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("carTelemetry Packet unreadable");
+            }
+            return carTelemetry;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private CarStatus ReadCarStatus(BinaryReader br)
+        {
+            CarStatus carStatus = new();
+            try
+            {
+                carStatus.tractionControl = br.ReadByte();
+                carStatus.antiLockBrakes = br.ReadByte();
+                carStatus.fuelMix = br.ReadByte();
+                carStatus.frontBrakeBias = br.ReadByte();
+                carStatus.pitLimiterStatus = br.ReadByte();
+                carStatus.fuelInTank = br.ReadSingle();
+                carStatus.fuelCapacity = br.ReadSingle();
+                carStatus.fuelRemainingLaps = br.ReadSingle();
+                carStatus.maxRPM = br.ReadUInt16();
+                carStatus.idleRPM = br.ReadUInt16();
+                carStatus.maxGears = br.ReadByte();
+                carStatus.drsAllowed = br.ReadByte();
+                carStatus.drsActivationDistance = br.ReadUInt16();
+                carStatus.actualTyreCompound = br.ReadByte();
+                carStatus.visualTyreCompound = br.ReadByte();
+                carStatus.tyresAgeLaps = br.ReadByte();
+                carStatus.vehicleFiaFlags = br.ReadSByte();
+                carStatus.enginePowerICE = br.ReadSingle();
+                carStatus.enginePowerMGUK = br.ReadSingle();
+                carStatus.ersStoreEnergy = br.ReadSingle();
+                carStatus.ersDeployMode = br.ReadByte();
+                carStatus.ersHarvestedThisLapMGUK = br.ReadSingle();
+                carStatus.ersHarvestedThisLapMGUH = br.ReadSingle();
+                carStatus.ersDeployedThisLap = br.ReadSingle();
+                carStatus.networkPaused = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("carStatus Packet unreadable");
+            }
+            return carStatus;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private FinalClassification ReadFinalClassification(BinaryReader br)
+        {
+            FinalClassification finalClassification = new();
+            try
+            {
+                finalClassification.position = br.ReadByte();
+                finalClassification.numLaps = br.ReadByte();
+                finalClassification.gridPosition = br.ReadByte();
+                finalClassification.points = br.ReadByte();
+                finalClassification.numPitStops = br.ReadByte();
+                finalClassification.resultStatus = br.ReadByte();
+                finalClassification.bestLapTimeInMS = br.ReadUInt32();
+                finalClassification.totalRaceTime = br.ReadDouble();
+                finalClassification.penaltiesTime = br.ReadByte();
+                finalClassification.numPenalties = br.ReadByte();
+                finalClassification.numTyreStints = br.ReadByte();
+                finalClassification.tyreStintsActual = br.ReadBytes(8);
+                finalClassification.tyreStintsVisual = br.ReadBytes(8);
+                finalClassification.tyreStintsEndLaps = br.ReadBytes(8);
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("finalClassification Packet unreadable");
+            }
+            return finalClassification;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private LobbyInfo ReadLobbyInfo(BinaryReader br)
+        {
+            LobbyInfo lobbyInfo = new();
+            try
+            {
+                lobbyInfo.aiControlled = br.ReadByte();
+                lobbyInfo.teamId = br.ReadByte();
+                lobbyInfo.nationality = br.ReadByte();
+                lobbyInfo.platform = br.ReadByte();
+                lobbyInfo.name = br.ReadBytes(48);
+                lobbyInfo.carNumber = br.ReadByte();
+                lobbyInfo.yourTelemetry = br.ReadByte();
+                lobbyInfo.showOnlineNames = br.ReadByte();
+                lobbyInfo.techLevel = br.ReadUInt16();
+                lobbyInfo.readyStatus = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("lobbyInfo Packet unreadable");
+            }
+            return lobbyInfo;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private CarDamage ReadCarDamage(BinaryReader br)
+        {
+            CarDamage carDamage = new();
+            try
+            {
+                carDamage.tyresWear = new float[4];
+                for (int i = 0; i < 4; i++) carDamage.tyresWear[i] = br.ReadSingle();
+                carDamage.tyresDamage = br.ReadBytes(4);
+                carDamage.brakesDamage = br.ReadBytes(4);
+                carDamage.frontLeftWingDamage = br.ReadByte();
+                carDamage.frontRightWingDamage = br.ReadByte();
+                carDamage.rearWingDamage = br.ReadByte();
+                carDamage.floorDamage = br.ReadByte();
+                carDamage.diffuserDamage = br.ReadByte();
+                carDamage.sidepodDamage = br.ReadByte();
+                carDamage.drsFault = br.ReadByte();
+                carDamage.ersFault = br.ReadByte();
+                carDamage.gearBoxDamage = br.ReadByte();
+                carDamage.engineDamage = br.ReadByte();
+                carDamage.engineMGUHWear = br.ReadByte();
+                carDamage.engineESWear = br.ReadByte();
+                carDamage.engineCEWear = br.ReadByte();
+                carDamage.engineICEWear = br.ReadByte();
+                carDamage.engineMGUKWear = br.ReadByte();
+                carDamage.engineTCWear = br.ReadByte();
+                carDamage.engineBlown = br.ReadByte();
+                carDamage.engineSeized = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("carDamage Packet unreadable");
+            }
+            return carDamage;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private SessionHistory ReadSessionHistory(BinaryReader br)
+        {
+            SessionHistory sessionHistory = new();
+            try
+            {
+                sessionHistory.carIdx = br.ReadByte();
+                sessionHistory.numLaps = br.ReadByte();
+                sessionHistory.numTyreStints = br.ReadByte();
+                sessionHistory.bestLapTimeLapNum = br.ReadByte();
+                sessionHistory.bestSector1LapNum = br.ReadByte();
+                sessionHistory.bestSector2LapNum = br.ReadByte();
+                sessionHistory.bestSector3LapNum = br.ReadByte();
+                sessionHistory.lapHistory = new LapHistory[100];
+                for (int i = 0; i < 100; i++)
+                {
+                    sessionHistory.lapHistory[i].lapTimeInMS = br.ReadUInt32();
+                    sessionHistory.lapHistory[i].sector1TimeInMS = br.ReadUInt16();
+                    sessionHistory.lapHistory[i].sector1TimeMinutes = br.ReadByte();
+                    sessionHistory.lapHistory[i].sector2TimeInMS = br.ReadUInt16();
+                    sessionHistory.lapHistory[i].sector2TimeMinutes = br.ReadByte();
+                    sessionHistory.lapHistory[i].sector3TimeInMS = br.ReadUInt16();
+                    sessionHistory.lapHistory[i].sector3TimeMinutes = br.ReadByte();
+                    sessionHistory.lapHistory[i].lapValidBitFlags = br.ReadByte();
+                }
+                sessionHistory.tyreStintHistory = new TyreStintHistory[8];
+                for (int i = 0; i < 8; i++)
+                {
+                    sessionHistory.tyreStintHistory[i].endLap = br.ReadByte();
+                    sessionHistory.tyreStintHistory[i].tyreActualCompound = br.ReadByte();
+                    sessionHistory.tyreStintHistory[i].tyreVisualCompound = br.ReadByte();
+                }
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("sessionHistory Packet unreadable");
+            }
+            return sessionHistory;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private TyreSet ReadTyreSet(BinaryReader br)
+        {
+            TyreSet tyreSet = new();
+            try
+            {
+                tyreSet.actualTyreCompound = br.ReadByte();
+                tyreSet.visualTyreCompound = br.ReadByte();
+                tyreSet.wear = br.ReadByte();
+                tyreSet.available = br.ReadByte();
+                tyreSet.recommendedSession = br.ReadByte();
+                tyreSet.lifeSpan = br.ReadByte();
+                tyreSet.usableLife = br.ReadByte();
+                tyreSet.lapDeltaTime = br.ReadInt16();
+                tyreSet.fitted = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("tyreSet Packet unreadable");
+            }
+            return tyreSet;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private MotionEx ReadMotionEx(BinaryReader br)
+        {
+            MotionEx motionEx = new();
+            try
+            {
+                motionEx.suspensionPosition = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.suspensionPosition[i] = br.ReadSingle();
+                motionEx.suspensionVelocity = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.suspensionVelocity[i] = br.ReadSingle();
+                motionEx.suspensionAcceleration = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.suspensionAcceleration[i] = br.ReadSingle();
+                motionEx.wheelSpeed = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelSpeed[i] = br.ReadSingle();
+                motionEx.wheelSlipRatio = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelSlipRatio[i] = br.ReadSingle();
+                motionEx.wheelSlipAngle = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelSlipAngle[i] = br.ReadSingle();
+                motionEx.wheelLatForce = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelLatForce[i] = br.ReadSingle();
+                motionEx.wheelLongForce = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelLongForce[i] = br.ReadSingle();
+                motionEx.heightOfCOGAboveGround = br.ReadSingle();
+                motionEx.localVelocityX = br.ReadSingle();
+                motionEx.localVelocityY = br.ReadSingle();
+                motionEx.localVelocityZ = br.ReadSingle();
+                motionEx.angularVelocityX = br.ReadSingle();
+                motionEx.angularVelocityY = br.ReadSingle();
+                motionEx.angularVelocityZ = br.ReadSingle();
+                motionEx.angularAccelerationX = br.ReadSingle();
+                motionEx.angularAccelerationY = br.ReadSingle();
+                motionEx.angularAccelerationZ = br.ReadSingle();
+                motionEx.frontWheelsAngle = br.ReadSingle();
+                motionEx.wheelVertForce = new float[4];
+                for (int i = 0; i < 4; i++) motionEx.wheelVertForce[i] = br.ReadSingle();
+                motionEx.frontAeroHeight = br.ReadSingle();
+                motionEx.rearAeroHeight = br.ReadSingle();
+                motionEx.frontRollAngle = br.ReadSingle();
+                motionEx.rearRollAngle = br.ReadSingle();
+                motionEx.chassisYaw = br.ReadSingle();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("motionEx Packet unreadable");
+            }
+            return motionEx;
+        }
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        private TimeTrial ReadTimeTrial(BinaryReader br)
+        {
+            TimeTrial timeTrial = new();
+            try
+            {
+                timeTrial.carIdx = br.ReadByte();
+                timeTrial.teamId = br.ReadByte();
+                timeTrial.lapTimeInMS = br.ReadUInt32();
+                timeTrial.sector1TimeInMS = br.ReadUInt32();
+                timeTrial.sector2TimeInMS = br.ReadUInt32();
+                timeTrial.sector3TimeInMS = br.ReadUInt32();
+                timeTrial.tractionControl = br.ReadByte();
+                timeTrial.gearboxAssist = br.ReadByte();
+                timeTrial.antiLockBrakes = br.ReadByte();
+                timeTrial.equalCarPerformance = br.ReadByte();
+                timeTrial.customSetup = br.ReadByte();
+                timeTrial.valid = br.ReadByte();
+            }
+            catch (EndOfStreamException)
+            {
+                Console.WriteLine("timeTrial Packet unreadable");
+            }
+            return timeTrial;
         }
     }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Structs
@@ -698,7 +1360,7 @@ namespace PacketVisionListener
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct WeatherForecastSample
     {// part of Session
-        public byte sessionType; // 0 = unknown, see appendix
+        public byte sessionType; // 0 = unknown
         public byte timeOffset; // Time in minutes the forecast is for
         public byte weather; // Weather - 0 = clear, 1 = light cloud, 2 = overcast, 3 = light rain, 4 = heavy rain, 5 = storm
         public sbyte trackTemperature; // Track temp. in degrees Celsius
@@ -708,15 +1370,15 @@ namespace PacketVisionListener
         public byte rainPercentage; // Rain percentage (0-100)
     }
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    struct Session
+    public struct Session
     {//753B
         public byte weather; // Weather - 0 = clear, 1 = light cloud, 2 = overcast, 3 = light rain, 4 = heavy rain, 5 = storm
         public sbyte trackTemperature; // Track temp. in degrees celsius
         public sbyte airTemperature; // Air temp. in degrees celsius
         public byte totalLaps; // Total number of laps in this race
         public ushort trackLength; // Track length in metres
-        public byte sessionType; // 0 = unknown, see appendix
-        public sbyte trackId; // -1 for unknown, see appendix
+        public byte sessionType; // 0 = unknown
+        public sbyte trackId; // -1 for unknown
         public byte formula; // Formula, 0 = F1 Modern, 1 = F1 Classic, 2 = F2, 3 = F1 Generic, 4 = Beta, 6 = Esports, 8 = F1 World, 9 = F1 Elimination
         public ushort sessionTimeLeft; // Time left in session in seconds
         public ushort sessionDuration; // Session duration in seconds
@@ -750,8 +1412,8 @@ namespace PacketVisionListener
         public byte DRSAssist; // 0 = off, 1 = on
         public byte dynamicRacingLine; // 0 = off, 1 = corners only, 2 = full
         public byte dynamicRacingLineType; // 0 = 2D, 1 = 3D
-        public byte gameMode; // Game mode id - see appendix
-        public byte ruleSet; // Ruleset - see appendix
+        public byte gameMode; // Game mode id
+        public byte ruleSet; // Ruleset
         public uint timeOfDay; // Local time of day - minutes since midnight
         public byte sessionLength; // 0 = None, 2 = Very Short, 3 = Short, 4 = Medium, 5 = Medium Long, 6 = Long, 7 = Full
         public byte speedUnitsLeadPlayer; // 0 = MPH, 1 = KPH
@@ -787,13 +1449,13 @@ namespace PacketVisionListener
         public byte affectsLicenceLevelMP; // 0 = Off, 1 = On
         public byte numSessionsInWeekend; // Number of session in following array
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 12)]
-        public byte[] weekendStructure; // List of session types to show weekend; structure - see appendix for types
+        public byte[] weekendStructure; // List of session types to show weekend; structure
         public float sector2LapDistanceStart; // Distance in m around track where sector 2 starts
         public float sector3LapDistanceStart; // Distance in m around track where sector 3 starts
     }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    struct Lap
+    public struct Lap
     {//1285B
         public uint lastLapTimeInMS; // Last lap time in milliseconds
         public uint currentLapTimeInMS; // Current time around the lap in milliseconds
@@ -1007,7 +1669,7 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct CarSetup
-    {//113B
+    {//1133B
         public byte frontWing; // Front wing aero
         public byte rearWing; // Rear wing aero
         public byte onThrottle; // Diff on throttle
@@ -1066,7 +1728,7 @@ namespace PacketVisionListener
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
         public float[] tyresPressure; // Tyres pressure (PSI)
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
-        public byte[] surfaceType; // Driving surface, see appendices
+        public byte[] surfaceType; // Driving surface
     }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -1235,9 +1897,9 @@ namespace PacketVisionListener
         public byte bestSector2LapNum; // Lap of best sector 2
         public byte bestSector3LapNum; // Lap of best sector 3
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100)]
-        public LapHistory[] lapHistoryData;
+        public LapHistory[] lapHistory;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public TyreStintHistory[] tyreStintsHistoryData;
+        public TyreStintHistory[] tyreStintHistory;
     }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]

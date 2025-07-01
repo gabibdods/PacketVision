@@ -1,0 +1,246 @@
+﻿@font-face {
+    font-family: 'Digital';
+    src: url('F1Wide.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: #222;
+    color: #eee;
+    font-family: 'Digital';
+    overflow: hidden;
+}
+#header {
+    position: absolute;
+    top: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 3rem;
+}
+canvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 500px;
+    width: 800px;
+    background: transparent;
+    border-radius: 50%;
+}
+#staticCanvas, #dynamicCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+#speed, #kmh, #engineRPM, #rpm, #gear, #drs {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Digital';
+}
+#speed {
+    top: 45%;
+    font-size: 40px;
+}
+#kmh {
+    top: 50%;
+}
+#engineRPM {
+    top: 53%;
+    font-size: 32px;
+}
+#rpm {
+    top: 58%;
+}
+#gear {
+    top: 62%;
+    height: 23px;
+    width: 110px;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 5px 20px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+.drs-container {
+    position: absolute;
+    top: 74%;
+    left: 50%;
+    margin-left: -20px;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+.arrow {
+    font-size: 48px;
+    font-weight: bold;
+    color: #42DD42;
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.drs-label {
+    top: 40%;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 20px;
+    transition: opacity 0.3s ease;
+}
+.left1 {
+    transform: translateX(-300%);
+}
+.left2 {
+    transform: translateX(-200%);
+}
+.right1 {
+    transform: translateX(300%);
+}
+.right2 {
+    transform: translateX(200%);
+}
+.active .left1,
+.active .left2 {
+    transform: translateX(400%);
+    opacity: 1;
+}
+.active .right1,
+.active .right2 {
+    transform: translateX(-320%);
+    opacity: 1;
+}
+.active .drs-label {
+    opacity: 1;
+}
+#steeringBarContainer {
+    position: absolute;
+    top: 80%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 20px;
+    width: 400px;
+    background: #333;
+    border-radius: 10px;
+}
+#steeringBar {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 100%;
+    background: orange;
+}
+#steeringLabel {
+    position: absolute;
+    top: 85%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    color: orange;
+}
+.sessionDataDisplay {
+    position: absolute;
+    display: flex;
+    justify-content: left;
+    width: 600px;
+    top: 8%;
+    left: 0;
+    transform: translateY(-50%);
+    margin-left: 1vw;
+    max-width: 90vw;
+}
+.marshalZoneDataDisplay {
+    position: absolute;
+    display: flex;
+    justify-content: right;
+    width: 600px;
+    top: 8%;
+    right: 0;
+    transform: translateY(-50%);
+    margin-right: 1vw;
+    max-width: 90vw;
+}
+.sessionDataRouletteContainer, .marshalZoneRouletteContainer {
+    width: 100%;
+    height: 59px;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #000;
+    background-color: #222;
+    margin: 0 auto;
+}
+.sessionDataRouletteTable, .marshalZoneRouletteTable {
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
+}
+.sessionDataRouletteRow {
+    display: flex;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 16px 24px;
+    width: 100%;
+    height: 60px;
+    border-bottom: 1px solid #333;
+    background: #222;
+    color: #eee;
+}
+.marshalZoneRouletteRow {
+    display: flex;
+    justify-content: flex-end;
+    text-align: right;
+    padding: 16px 24px;
+    width: 100%;
+    height: 60px;
+    border-bottom: 1px solid #333;
+    background: #222;
+    color: #eee;
+}
+.sessionDataRouletteRow strong {
+    flex-grow: 1;
+    font-size: 15px;
+}
+.marshalZoneRouletteRow strong {
+    flex-grow: 1;
+    font-size: 15px;
+    margin-right: 44px;
+}
+.sessionDataRouletteRow:first-child button, .marshalZoneRouletteRow:first-child button {
+    display: inline-block;
+}
+.sessionDataScrollUp, .sessionDataScrollDown, .marshalZoneScrollUp, .marshalZoneScrollDown {
+    background: transparent;
+    height: 29px;
+    color: #888;
+    font-size: 20px;
+}
+.sessionDataScrollButtons {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    margin: -8px 490px;
+}
+.marshalZoneScrollButtons {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    margin: -8px 540px;
+}
+button {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+}
+button:hover {
+    color: #444;
+}
