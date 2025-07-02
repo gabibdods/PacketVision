@@ -1,13 +1,5 @@
 *
 
-!/.idea/
-!/.idea/encodings.xml
-!/.idea/indexLayout.xml
-!/.idea/jsLibraryMappings.xml
-!/.idea/php.xml
-!/.idea/sqldialects.xml
-!/.idea/vcs.xml
-
 !/PacketVisionListener/
 !/PacketVisionListener/**
 
