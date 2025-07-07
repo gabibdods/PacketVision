@@ -22,10 +22,23 @@ namespace PacketVisionListener
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Inserters
                 if (packet.Length == 1349)
                 {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarMotion of 1349B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketMotionData ReadPacketMotionData(BinaryReader br)
+                    {//id=0, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
+                        PacketMotionData packetMotionData = new();
+                        try
+                        {
+                            packetMotionData.header = ReadPacketHeader(br);
+                            packetMotionData.carMotionData = new CarMotionData[22];
+                            for (int i = 0; i < 22; i++) packetMotionData.carMotionData[i] = ReadCarMotionData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketMotionData packet. Skipping...");
+                        }
+                        return packetMotionData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -384,10 +397,25 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1285)
                 {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Lap of 1285B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketLapData ReadPacketLapData(BinaryReader br)
+                    {//id=2, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
+                        PacketLapData packetLapData = new();
+                        try
+                        {
+                            packetLapData.header = ReadPacketHeader(br);
+                            packetLapData.lapData = new LapData[22];
+                            for (int i = 0; i < 22; i++) packetLapData.lapData[i] = ReadLapData(br);
+                            packetLapData.timeTrialPBCarIdx = br.ReadByte();
+                            packetLapData.timeTrialRivalCarIdx = br.ReadByte();
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketLapData packet. Skipping...");
+                        }
+                        return packetLapData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -412,10 +440,24 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1350)
                 {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Participants of 1350B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketParticipantsData ReadPacketParticipantsData(BinaryReader br)
+                    {//id=4,//id=1, Packets sent on Frame 1
+                        PacketParticipantsData packetParticipantsData = new();
+                        try
+                        {
+                            packetParticipantsData.header = ReadPacketHeader(br);
+                            packetParticipantsData.numActiveCars = br.ReadByte();
+                            packetParticipantsData.participants = new ParticipantData[22];
+                            for (int i = 0; i < 22; i++) packetParticipantsData.participants[i] = ReadParticipantData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketParticipantsData packet. Skipping...");
+                        }
+                        return packetParticipantsData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -426,10 +468,24 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1133)
                 {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarSetup of 1133B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketCarSetupData ReadPacketCarSetupData(BinaryReader br)
+                    {//id=5,Packets sent on Frame 1, Packets sent on Frame 31
+                        PacketCarSetupData packetCarSetupData = new();
+                        try
+                        {
+                            packetCarSetupData.header = ReadPacketHeader(br);
+                            packetCarSetupData.carSetups = new CarSetupData[22];
+                            for (int i = 0; i < 22; i++) packetCarSetupData.carSetups[i] = ReadCarSetupData(br);
+                            packetCarSetupData.nextFrontWingValue = br.ReadSingle();
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketCarSetupData packet. Skipping...");
+                        }
+                        return packetCarSetupData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -533,10 +589,23 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1239)
                 {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarStatus of 1239B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketCarStatusData ReadPacketCarStatusData(BinaryReader br)
+                    {//id=7, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
+                        PacketCarStatusData packetCarStatusData = new();
+                        try
+                        {
+                            packetCarStatusData.header = ReadPacketHeader(br);
+                            packetCarStatusData.carStatusData = new CarStatusData[22];
+                            for (int i = 0; i < 22; i++) packetCarStatusData.carStatusData[i] = ReadCarStatusData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketCarStatusData packet. Skipping...");
+                        }
+                        return packetCarStatusData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -547,10 +616,24 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1020)
                 {//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of FinalClassification of 1020B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketFinalClassificationData ReadPacketFinalClassificationData(BinaryReader br)
+                    {//id=8, 
+                        PacketFinalClassificationData packetFinalClassificationData = new();
+                        try
+                        {
+                            packetFinalClassificationData.header = ReadPacketHeader(br);
+                            packetFinalClassificationData.numCars = br.ReadByte();
+                            packetFinalClassificationData.classificationData = new FinalClassificationData[22];
+                            for (int i = 0; i < 22; i++) packetFinalClassificationData.classificationData[i] = ReadFinalClassificationData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketFinalClassificationData packet. Skipping...");
+                        }
+                        return packetFinalClassificationData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -561,10 +644,24 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 1306)
                 {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of LobbyInfo of 1306B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketLobbyInfoData ReadPacketLobbyInfoData(BinaryReader br)
+                    {//id=9, 
+                        PacketLobbyInfoData packetLobbyInfoData = new();
+                        try
+                        {
+                            packetLobbyInfoData.header = ReadPacketHeader(br);
+                            packetLobbyInfoData.numPlayers = br.ReadByte();
+                            packetLobbyInfoData.lobbyPlayers = new LobbyInfoData[22];
+                            for (int i = 0; i < 22; i++) packetLobbyInfoData.lobbyPlayers[i] = ReadLobbyInfoData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketLobbyInfoData packet. Skipping...");
+                        }
+                        return packetLobbyInfoData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -575,10 +672,23 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 953)
                 {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarDamage of 953B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketCarDamageData ReadPacketCarDamageData(BinaryReader br)
+                    {//id=10, Packets sent on Frame 1, Packets sent on Frame 31
+                        PacketCarDamageData packetCarDamageData = new();
+                        try
+                        {
+                            packetCarDamageData.header = ReadPacketHeader(br);
+                            packetCarDamageData.carDamageData = new CarDamageData[22];
+                            for (int i = 0; i < 22; i++) packetCarDamageData.carDamageData[i] = ReadCarDamageData(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketCarDamageData packet. Skipping...");
+                        }
+                        return packetCarDamageData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -603,10 +713,25 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 231)
                 {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TyreSet of 231B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketTyreSetsData ReadPacketTyreSetsData(BinaryReader br)
+                    {//id=12, 
+                        PacketTyreSetsData packetTyreSetsData = new();
+                        try
+                        {
+                            packetTyreSetsData.header = ReadPacketHeader(br);
+                            packetTyreSetsData.carIdx = br.ReadByte();
+                            packetTyreSetsData.tyreSetData = new TyreSetData[20];
+                            for (int i = 0; i < 20; i++) packetTyreSetsData.tyreSetData[i] = ReadTyreSetData(br);
+                            packetTyreSetsData.fittedIdx = br.ReadByte();
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketTyreSetsData packet. Skipping...");
+                        }
+                        return packetTyreSetsData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
@@ -631,10 +756,24 @@ namespace PacketVisionListener
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 else if (packet.Length == 101)
                 {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TimeTrial of 101B
-                    
-                    
-                    
-                    
+                    /*
+                    private static PacketTimeTrialData ReadPacketTimeTrialData(BinaryReader br)
+                    {//id=14, 
+                        PacketTimeTrialData packetTimeTrialData = new();
+                        try
+                        {
+                            packetTimeTrialData.header = ReadPacketHeader(br);
+                            packetTimeTrialData.playerSessionBestDataSet = ReadTimeTrialDataSet(br);
+                            packetTimeTrialData.personalBestDataSet = ReadTimeTrialDataSet(br);
+                            packetTimeTrialData.rivalDataSet = ReadTimeTrialDataSet(br);
+                        }
+                        catch (EndOfStreamException)
+                        {
+                            Console.WriteLine("Warning: Incomplete PacketTimeTrialData packet. Skipping...");
+                        }
+                        return packetTimeTrialData;
+                    }
+                    */
                  //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
                     
                     
