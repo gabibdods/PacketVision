@@ -1,25 +1,25 @@
 *
 
-!/PacketVisionListener/
-!/PacketVisionListener/**
+!PacketVisionListener/
+!PacketVisionListener/**
 
-!/PacketVisionMySQLDump/
-!/PacketVisionMySQLDump/**
+!PacketVisionMySQLDump/
+!PacketVisionMySQLDump/**
 
-!/PacketVisionWeb/
-!/PacketVisionWeb/**
-!/PacketVisionWeb/includes/
-!/PacketVisionWeb/includes/**
+!PacketVisionWeb/
+!PacketVisionWeb/**
+!PacketVisionWeb/includes/
+!PacketVisionWeb/includes/**
 
-!/PacketVisionWebSocket/
-!/PacketVisionWebSocket/**
-!/PacketVisionWebSocket/Nodejs/
-!/PacketVisionWebSocket/Nodejs/**
+!PacketVisionWebSocket/
+!PacketVisionWebSocket/**
+!PacketVisionWebSocket/Nodejs/
+!PacketVisionWebSocket/Nodejs/**
 
-!/docker-compose.yml
-!/Dockerfile
-!/init.sql
-!/officialPacketDoc.docx
-!/publicPacketDoc.md
-!/README.md
-
+!.gitignore
+!*.yml
+!Dockerfile
+!*.sql
+!*.docx
+!*.md
+!*.txt
