@@ -1,6 +1,6 @@
 # 🏁 Racing Telemetry Analysis & Coaching System
 
-A full-stack, machine learning-enabled telemetry web application that records real-time driving data and provides feedback on racing technique using insights from professional e-sports drivers across multiple racing classes. Built with C#, .NET Worker Services, PHP, MySQL, and Python, and deployed via Docker containers on Microsoft Azure.
+A full-stack, machine learning-enabled telemetry web application that records real-time driving data and provides feedback on racing technique using insights from professional e-sports drivers across multiple racing classes. Built with C#, .NET Worker Services, PHP, MySQL, JavaScript and Python and deployed via Docker containers.
 
 ---
 
@@ -10,7 +10,7 @@ As a motorsport enthusiast, I wanted to **track and analyze** my performance dur
 - Record telemetry data from my races
 - Store and process the data securely
 - Train and serve a machine learning model to give feedback based on elite e-sports drivers
-- Run efficiently and scalably via **Dockerized deployment on Azure**
+- Run efficiently and scalably via **Dockerized deployment**
 
 ---
 
@@ -19,7 +19,7 @@ As a motorsport enthusiast, I wanted to **track and analyze** my performance dur
 - Create a full-featured telemetry **web app server** for racing simulation data
 - Train a **machine learning model** to detect driving inefficiencies and recommend improvements
 - Compare personal performance with data from **Formula 1, Le Mans Hypercar, GT3, and Rally e-sports drivers**
-- Deploy the system using **Docker** on **Microsoft Azure** for real-world performance testing
+- Deploy the system using **Docker** for real-world performance testing
 - Improve expertise in ML pipelines, server architecture, and cloud-native deployment
 
 ---
@@ -39,9 +39,7 @@ As a motorsport enthusiast, I wanted to **track and analyze** my performance dur
 
 ### 🐳 DevOps & Deployment
 - **Docker** — Containerized the full stack for portability
-- **YAML** — Docker Compose and Azure Container configuration
-- **Azure Repos** — Version control and CI/CD integration
-- **Azure Container Apps** — Scalable, managed container hosting
+- **YAML** — Docker Compose
 
 ---
 
@@ -80,7 +78,6 @@ As a motorsport enthusiast, I wanted to **track and analyze** my performance dur
 - Built and managed a **.NET-based hosted service**
 - Used **Docker Compose** to streamline local and cloud deployments
 - Learned to integrate multi-language services across **C#, F#, Python, and PHP**
-- Managed infrastructure and deployment pipelines using **Azure Repos** and **Azure Container Apps**
 
 ### 🧠 Machine Learning
 - Trained a model on complex time-series telemetry data
@@ -96,7 +93,6 @@ As a motorsport enthusiast, I wanted to **track and analyze** my performance dur
 
 ## 🚀 Future Enhancements
 
-- Expand support to live WebSocket-based telemetry streaming
 - Integrate OpenF1 API for additional pro racing benchmark data
 - Add an interactive driving heatmap using JavaScript + D3.js
 - Explore using **ONNX** for more efficient ML model serving with C#
