@@ -1,28 +1,43 @@
+# https://github.com/gabibdods/NewRepositoryTemplate:
 *
 
 !.gitattributes
 !.gitignore
-!*.yml
-!Dockerfile
-!*.sql
-!*.docx
-!*.md
-!*.txt
+!README.md
 !License/
-!License/*.md
+!License/LICENSE.md
+!License/NOTICE.md
+
+
+# particular repository ignores:
+
+!Dockerfile
+!publicPacketDoc.md
+!officialPacketDoc.docx
+!init.sql
+!docker-compose.yml
 
 !PacketVisionListener/
-!PacketVisionListener/**
-
-!PacketVisionMySQLDump/
-!PacketVisionMySQLDump/**
+!PacketVisionListener/Dockerfile
+!PacketVisionListener/PacketVisionListener.csproj
+!PacketVisionListener/Program.cs
+!PacketVisionListener/Worker.cs
 
 !PacketVisionWeb/
-!PacketVisionWeb/**
+!PacketVisionWeb/Dockerfile
+!PacketVisionWeb/index.php
+!PacketVisionWeb/wait-for-it.sh
+
 !PacketVisionWeb/includes/
-!PacketVisionWeb/includes/**
+!PacketVisionWeb/includes/api.php
+!PacketVisionWeb/includes/F1Bold.otf
+!PacketVisionWeb/includes/F1Regular.otf
+!PacketVisionWeb/includes/F1Wide.otf
+!PacketVisionWeb/includes/script.js
+!PacketVisionWeb/includes/stylesheet.css
 
 !PacketVisionWebSocket/
-!PacketVisionWebSocket/**
-!PacketVisionWebSocket/Nodejs/
-!PacketVisionWebSocket/Nodejs/**
+!PacketVisionWebSocket/Dockerfile
+!PacketVisionWebSocket/package.json
+!PacketVisionWebSocket/package-lock.json
+!PacketVisionWebSocket/websocket.js
