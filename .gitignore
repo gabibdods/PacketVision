@@ -1,5 +1,16 @@
 *
 
+!.gitattributes
+!.gitignore
+!*.yml
+!Dockerfile
+!*.sql
+!*.docx
+!*.md
+!*.txt
+!License/
+!License/*.md
+
 !PacketVisionListener/
 !PacketVisionListener/**
 
@@ -15,11 +26,3 @@
 !PacketVisionWebSocket/**
 !PacketVisionWebSocket/Nodejs/
 !PacketVisionWebSocket/Nodejs/**
-
-!.gitignore
-!*.yml
-!Dockerfile
-!*.sql
-!*.docx
-!*.md
-!*.txt
