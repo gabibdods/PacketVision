@@ -1,794 +1,1817 @@
-using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using MySqlConnector;
 
 namespace PacketVisionListener
 {
-    public class Worker : BackgroundService
+    public class Worker: BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            using var client = new UdpClient(20777);
-            var connectionString = "Server=db;Port=3306;Database=PACKETVISION;User=mysqluser;Password=mysqlpass;";
+            var udpPort = Environment.GetEnvironmentVariable("L_PORT")!;
+            var mySqlPort = Environment.GetEnvironmentVariable("DB_PORT");
+            var mySqlUser = Environment.GetEnvironmentVariable("MYSQL_USER");
+            var mySqlPass = Environment.GetEnvironmentVariable("MYSQL_PASS");
+            
+            using var client = new UdpClient(int.Parse(udpPort));
+            var connectionString = $"Server=db;Port={mySqlPort};Database=PACKETVISION;User={mySqlUser};Password={mySqlPass};";
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                UdpReceiveResult result = await client.ReceiveAsync();
+                var result = await client.ReceiveAsync(stoppingToken);
                 var packet = result.Buffer;
 
                 using var ms = new MemoryStream(packet);
                 using var br = new BinaryReader(ms);
+                
+                await using var conn = new MySqlConnection(connectionString);
+                await conn.OpenAsync(stoppingToken);
 //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Inserters
-                if (packet.Length == 1349)
-                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarMotion of 1349B
-                    /*
-                    private static PacketMotionData ReadPacketMotionData(BinaryReader br)
-                    {//id=0, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
-                        PacketMotionData packetMotionData = new();
-                        try
-                        {
-                            packetMotionData.header = ReadPacketHeader(br);
-                            packetMotionData.carMotionData = new CarMotionData[22];
-                            for (int i = 0; i < 22; i++) packetMotionData.carMotionData[i] = ReadCarMotionData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketMotionData packet. Skipping...");
-                        }
-                        return packetMotionData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("CarMotion");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 753)
-                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Session of 753B
-                    Header headerSession = new Header
-                    {
-                        packetFormat = br.ReadUInt16(),
-                        gameYear = br.ReadByte(),
-                        gameMajorVersion = br.ReadByte(),
-                        gameMinorVersion = br.ReadByte(),
-                        packetVersion = br.ReadByte(),
-                        packetId = br.ReadByte(),
-                        sessionUID = br.ReadUInt64(),
-                        sessionTime = br.ReadSingle(),
-                        frameIdentifier = br.ReadUInt32(),
-                        overallFrameIdentifier = br.ReadUInt32(),
-                        playerCarIndex = br.ReadByte(),
-                        secondaryPlayerCarIndex = br.ReadByte()
-                    };
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    var dataSession = ReadSession(br);
-                    
-                    using var conn = new MySqlConnection(connectionString);
-                    await conn.OpenAsync();
-
-                    using var cmd = new MySqlCommand(@"
-                        INSERT INTO SESSION (
-                            weather, trackTemperature, airTemperature, totalLaps, trackLength, sessionType, trackId, formula, sessionTimeLeft, sessionDuration, pitSpeedLimit, gamePaused, isSpectating, spectatorCarIndex, sliProNativeSupport, numMarshalZones,
-                            marshalZones0_zoneStart, marshalZones0_zoneFlag,
-                            marshalZones1_zoneStart, marshalZones1_zoneFlag,
-                            marshalZones2_zoneStart, marshalZones2_zoneFlag,
-                            marshalZones3_zoneStart, marshalZones3_zoneFlag,
-                            marshalZones4_zoneStart, marshalZones4_zoneFlag,
-                            marshalZones5_zoneStart, marshalZones5_zoneFlag,
-                            marshalZones6_zoneStart, marshalZones6_zoneFlag,
-                            marshalZones7_zoneStart, marshalZones7_zoneFlag,
-                            marshalZones8_zoneStart, marshalZones8_zoneFlag,
-                            marshalZones9_zoneStart, marshalZones9_zoneFlag,
-                            marshalZones10_zoneStart, marshalZones10_zoneFlag,
-                            marshalZones11_zoneStart, marshalZones11_zoneFlag,
-                            marshalZones12_zoneStart, marshalZones12_zoneFlag,
-                            marshalZones13_zoneStart, marshalZones13_zoneFlag,
-                            marshalZones14_zoneStart, marshalZones14_zoneFlag,
-                            marshalZones15_zoneStart, marshalZones15_zoneFlag,
-                            marshalZones16_zoneStart, marshalZones16_zoneFlag,
-                            marshalZones17_zoneStart, marshalZones17_zoneFlag,
-                            marshalZones18_zoneStart, marshalZones18_zoneFlag,
-                            marshalZones19_zoneStart, marshalZones19_zoneFlag,
-                            marshalZones20_zoneStart, marshalZones20_zoneFlag,
-                            safetyCarStatus, networkGame, numWeatherForecastSamples,
-                            weatherForecastSamples0_sessionType, weatherForecastSamples0_timeOffset, weatherForecastSamples0_weather, weatherForecastSamples0_trackTemperature, weatherForecastSamples0_trackTemperatureChange, weatherForecastSamples0_airTemperature, weatherForecastSamples0_airTemperatureChange, weatherForecastSamples0_rainPercentage,
-                            weatherForecastSamples1_sessionType, weatherForecastSamples1_timeOffset, weatherForecastSamples1_weather, weatherForecastSamples1_trackTemperature, weatherForecastSamples1_trackTemperatureChange, weatherForecastSamples1_airTemperature, weatherForecastSamples1_airTemperatureChange, weatherForecastSamples1_rainPercentage,
-                            weatherForecastSamples2_sessionType, weatherForecastSamples2_timeOffset, weatherForecastSamples2_weather, weatherForecastSamples2_trackTemperature, weatherForecastSamples2_trackTemperatureChange, weatherForecastSamples2_airTemperature, weatherForecastSamples2_airTemperatureChange, weatherForecastSamples2_rainPercentage,
-                            weatherForecastSamples3_sessionType, weatherForecastSamples3_timeOffset, weatherForecastSamples3_weather, weatherForecastSamples3_trackTemperature, weatherForecastSamples3_trackTemperatureChange, weatherForecastSamples3_airTemperature, weatherForecastSamples3_airTemperatureChange, weatherForecastSamples3_rainPercentage,
-                            weatherForecastSamples4_sessionType, weatherForecastSamples4_timeOffset, weatherForecastSamples4_weather, weatherForecastSamples4_trackTemperature, weatherForecastSamples4_trackTemperatureChange, weatherForecastSamples4_airTemperature, weatherForecastSamples4_airTemperatureChange, weatherForecastSamples4_rainPercentage,
-                            weatherForecastSamples5_sessionType, weatherForecastSamples5_timeOffset, weatherForecastSamples5_weather, weatherForecastSamples5_trackTemperature, weatherForecastSamples5_trackTemperatureChange, weatherForecastSamples5_airTemperature, weatherForecastSamples5_airTemperatureChange, weatherForecastSamples5_rainPercentage,
-                            weatherForecastSamples6_sessionType, weatherForecastSamples6_timeOffset, weatherForecastSamples6_weather, weatherForecastSamples6_trackTemperature, weatherForecastSamples6_trackTemperatureChange, weatherForecastSamples6_airTemperature, weatherForecastSamples6_airTemperatureChange, weatherForecastSamples6_rainPercentage,
-                            weatherForecastSamples7_sessionType, weatherForecastSamples7_timeOffset, weatherForecastSamples7_weather, weatherForecastSamples7_trackTemperature, weatherForecastSamples7_trackTemperatureChange, weatherForecastSamples7_airTemperature, weatherForecastSamples7_airTemperatureChange, weatherForecastSamples7_rainPercentage,
-                            weatherForecastSamples8_sessionType, weatherForecastSamples8_timeOffset, weatherForecastSamples8_weather, weatherForecastSamples8_trackTemperature, weatherForecastSamples8_trackTemperatureChange, weatherForecastSamples8_airTemperature, weatherForecastSamples8_airTemperatureChange, weatherForecastSamples8_rainPercentage,
-                            weatherForecastSamples9_sessionType, weatherForecastSamples9_timeOffset, weatherForecastSamples9_weather, weatherForecastSamples9_trackTemperature, weatherForecastSamples9_trackTemperatureChange, weatherForecastSamples9_airTemperature, weatherForecastSamples9_airTemperatureChange, weatherForecastSamples9_rainPercentage,
-                            weatherForecastSamples10_sessionType, weatherForecastSamples10_timeOffset, weatherForecastSamples10_weather, weatherForecastSamples10_trackTemperature, weatherForecastSamples10_trackTemperatureChange, weatherForecastSamples10_airTemperature, weatherForecastSamples10_airTemperatureChange, weatherForecastSamples10_rainPercentage,
-                            weatherForecastSamples11_sessionType, weatherForecastSamples11_timeOffset, weatherForecastSamples11_weather, weatherForecastSamples11_trackTemperature, weatherForecastSamples11_trackTemperatureChange, weatherForecastSamples11_airTemperature, weatherForecastSamples11_airTemperatureChange, weatherForecastSamples11_rainPercentage,
-                            weatherForecastSamples12_sessionType, weatherForecastSamples12_timeOffset, weatherForecastSamples12_weather, weatherForecastSamples12_trackTemperature, weatherForecastSamples12_trackTemperatureChange, weatherForecastSamples12_airTemperature, weatherForecastSamples12_airTemperatureChange, weatherForecastSamples12_rainPercentage,
-                            weatherForecastSamples13_sessionType, weatherForecastSamples13_timeOffset, weatherForecastSamples13_weather, weatherForecastSamples13_trackTemperature, weatherForecastSamples13_trackTemperatureChange, weatherForecastSamples13_airTemperature, weatherForecastSamples13_airTemperatureChange, weatherForecastSamples13_rainPercentage,
-                            weatherForecastSamples14_sessionType, weatherForecastSamples14_timeOffset, weatherForecastSamples14_weather, weatherForecastSamples14_trackTemperature, weatherForecastSamples14_trackTemperatureChange, weatherForecastSamples14_airTemperature, weatherForecastSamples14_airTemperatureChange, weatherForecastSamples14_rainPercentage,
-                            weatherForecastSamples15_sessionType, weatherForecastSamples15_timeOffset, weatherForecastSamples15_weather, weatherForecastSamples15_trackTemperature, weatherForecastSamples15_trackTemperatureChange, weatherForecastSamples15_airTemperature, weatherForecastSamples15_airTemperatureChange, weatherForecastSamples15_rainPercentage,
-                            weatherForecastSamples16_sessionType, weatherForecastSamples16_timeOffset, weatherForecastSamples16_weather, weatherForecastSamples16_trackTemperature, weatherForecastSamples16_trackTemperatureChange, weatherForecastSamples16_airTemperature, weatherForecastSamples16_airTemperatureChange, weatherForecastSamples16_rainPercentage,
-                            weatherForecastSamples17_sessionType, weatherForecastSamples17_timeOffset, weatherForecastSamples17_weather, weatherForecastSamples17_trackTemperature, weatherForecastSamples17_trackTemperatureChange, weatherForecastSamples17_airTemperature, weatherForecastSamples17_airTemperatureChange, weatherForecastSamples17_rainPercentage,
-                            weatherForecastSamples18_sessionType, weatherForecastSamples18_timeOffset, weatherForecastSamples18_weather, weatherForecastSamples18_trackTemperature, weatherForecastSamples18_trackTemperatureChange, weatherForecastSamples18_airTemperature, weatherForecastSamples18_airTemperatureChange, weatherForecastSamples18_rainPercentage,
-                            weatherForecastSamples19_sessionType, weatherForecastSamples19_timeOffset, weatherForecastSamples19_weather, weatherForecastSamples19_trackTemperature, weatherForecastSamples19_trackTemperatureChange, weatherForecastSamples19_airTemperature, weatherForecastSamples19_airTemperatureChange, weatherForecastSamples19_rainPercentage,
-                            weatherForecastSamples20_sessionType, weatherForecastSamples20_timeOffset, weatherForecastSamples20_weather, weatherForecastSamples20_trackTemperature, weatherForecastSamples20_trackTemperatureChange, weatherForecastSamples20_airTemperature, weatherForecastSamples20_airTemperatureChange, weatherForecastSamples20_rainPercentage,
-                            weatherForecastSamples21_sessionType, weatherForecastSamples21_timeOffset, weatherForecastSamples21_weather, weatherForecastSamples21_trackTemperature, weatherForecastSamples21_trackTemperatureChange, weatherForecastSamples21_airTemperature, weatherForecastSamples21_airTemperatureChange, weatherForecastSamples21_rainPercentage,
-                            weatherForecastSamples22_sessionType, weatherForecastSamples22_timeOffset, weatherForecastSamples22_weather, weatherForecastSamples22_trackTemperature, weatherForecastSamples22_trackTemperatureChange, weatherForecastSamples22_airTemperature, weatherForecastSamples22_airTemperatureChange, weatherForecastSamples22_rainPercentage,
-                            weatherForecastSamples23_sessionType, weatherForecastSamples23_timeOffset, weatherForecastSamples23_weather, weatherForecastSamples23_trackTemperature, weatherForecastSamples23_trackTemperatureChange, weatherForecastSamples23_airTemperature, weatherForecastSamples23_airTemperatureChange, weatherForecastSamples23_rainPercentage,
-                            weatherForecastSamples24_sessionType, weatherForecastSamples24_timeOffset, weatherForecastSamples24_weather, weatherForecastSamples24_trackTemperature, weatherForecastSamples24_trackTemperatureChange, weatherForecastSamples24_airTemperature, weatherForecastSamples24_airTemperatureChange, weatherForecastSamples24_rainPercentage,
-                            weatherForecastSamples25_sessionType, weatherForecastSamples25_timeOffset, weatherForecastSamples25_weather, weatherForecastSamples25_trackTemperature, weatherForecastSamples25_trackTemperatureChange, weatherForecastSamples25_airTemperature, weatherForecastSamples25_airTemperatureChange, weatherForecastSamples25_rainPercentage,
-                            weatherForecastSamples26_sessionType, weatherForecastSamples26_timeOffset, weatherForecastSamples26_weather, weatherForecastSamples26_trackTemperature, weatherForecastSamples26_trackTemperatureChange, weatherForecastSamples26_airTemperature, weatherForecastSamples26_airTemperatureChange, weatherForecastSamples26_rainPercentage,
-                            weatherForecastSamples27_sessionType, weatherForecastSamples27_timeOffset, weatherForecastSamples27_weather, weatherForecastSamples27_trackTemperature, weatherForecastSamples27_trackTemperatureChange, weatherForecastSamples27_airTemperature, weatherForecastSamples27_airTemperatureChange, weatherForecastSamples27_rainPercentage,
-                            weatherForecastSamples28_sessionType, weatherForecastSamples28_timeOffset, weatherForecastSamples28_weather, weatherForecastSamples28_trackTemperature, weatherForecastSamples28_trackTemperatureChange, weatherForecastSamples28_airTemperature, weatherForecastSamples28_airTemperatureChange, weatherForecastSamples28_rainPercentage,
-                            weatherForecastSamples29_sessionType, weatherForecastSamples29_timeOffset, weatherForecastSamples29_weather, weatherForecastSamples29_trackTemperature, weatherForecastSamples29_trackTemperatureChange, weatherForecastSamples29_airTemperature, weatherForecastSamples29_airTemperatureChange, weatherForecastSamples29_rainPercentage,
-                            weatherForecastSamples30_sessionType, weatherForecastSamples30_timeOffset, weatherForecastSamples30_weather, weatherForecastSamples30_trackTemperature, weatherForecastSamples30_trackTemperatureChange, weatherForecastSamples30_airTemperature, weatherForecastSamples30_airTemperatureChange, weatherForecastSamples30_rainPercentage,
-                            weatherForecastSamples31_sessionType, weatherForecastSamples31_timeOffset, weatherForecastSamples31_weather, weatherForecastSamples31_trackTemperature, weatherForecastSamples31_trackTemperatureChange, weatherForecastSamples31_airTemperature, weatherForecastSamples31_airTemperatureChange, weatherForecastSamples31_rainPercentage,
-                            weatherForecastSamples32_sessionType, weatherForecastSamples32_timeOffset, weatherForecastSamples32_weather, weatherForecastSamples32_trackTemperature, weatherForecastSamples32_trackTemperatureChange, weatherForecastSamples32_airTemperature, weatherForecastSamples32_airTemperatureChange, weatherForecastSamples32_rainPercentage,
-                            weatherForecastSamples33_sessionType, weatherForecastSamples33_timeOffset, weatherForecastSamples33_weather, weatherForecastSamples33_trackTemperature, weatherForecastSamples33_trackTemperatureChange, weatherForecastSamples33_airTemperature, weatherForecastSamples33_airTemperatureChange, weatherForecastSamples33_rainPercentage,
-                            weatherForecastSamples34_sessionType, weatherForecastSamples34_timeOffset, weatherForecastSamples34_weather, weatherForecastSamples34_trackTemperature, weatherForecastSamples34_trackTemperatureChange, weatherForecastSamples34_airTemperature, weatherForecastSamples34_airTemperatureChange, weatherForecastSamples34_rainPercentage,
-                            weatherForecastSamples35_sessionType, weatherForecastSamples35_timeOffset, weatherForecastSamples35_weather, weatherForecastSamples35_trackTemperature, weatherForecastSamples35_trackTemperatureChange, weatherForecastSamples35_airTemperature, weatherForecastSamples35_airTemperatureChange, weatherForecastSamples35_rainPercentage,
-                            weatherForecastSamples36_sessionType, weatherForecastSamples36_timeOffset, weatherForecastSamples36_weather, weatherForecastSamples36_trackTemperature, weatherForecastSamples36_trackTemperatureChange, weatherForecastSamples36_airTemperature, weatherForecastSamples36_airTemperatureChange, weatherForecastSamples36_rainPercentage,
-                            weatherForecastSamples37_sessionType, weatherForecastSamples37_timeOffset, weatherForecastSamples37_weather, weatherForecastSamples37_trackTemperature, weatherForecastSamples37_trackTemperatureChange, weatherForecastSamples37_airTemperature, weatherForecastSamples37_airTemperatureChange, weatherForecastSamples37_rainPercentage,
-                            weatherForecastSamples38_sessionType, weatherForecastSamples38_timeOffset, weatherForecastSamples38_weather, weatherForecastSamples38_trackTemperature, weatherForecastSamples38_trackTemperatureChange, weatherForecastSamples38_airTemperature, weatherForecastSamples38_airTemperatureChange, weatherForecastSamples38_rainPercentage,
-                            weatherForecastSamples39_sessionType, weatherForecastSamples39_timeOffset, weatherForecastSamples39_weather, weatherForecastSamples39_trackTemperature, weatherForecastSamples39_trackTemperatureChange, weatherForecastSamples39_airTemperature, weatherForecastSamples39_airTemperatureChange, weatherForecastSamples39_rainPercentage,
-                            weatherForecastSamples40_sessionType, weatherForecastSamples40_timeOffset, weatherForecastSamples40_weather, weatherForecastSamples40_trackTemperature, weatherForecastSamples40_trackTemperatureChange, weatherForecastSamples40_airTemperature, weatherForecastSamples40_airTemperatureChange, weatherForecastSamples40_rainPercentage,
-                            weatherForecastSamples41_sessionType, weatherForecastSamples41_timeOffset, weatherForecastSamples41_weather, weatherForecastSamples41_trackTemperature, weatherForecastSamples41_trackTemperatureChange, weatherForecastSamples41_airTemperature, weatherForecastSamples41_airTemperatureChange, weatherForecastSamples41_rainPercentage,
-                            weatherForecastSamples42_sessionType, weatherForecastSamples42_timeOffset, weatherForecastSamples42_weather, weatherForecastSamples42_trackTemperature, weatherForecastSamples42_trackTemperatureChange, weatherForecastSamples42_airTemperature, weatherForecastSamples42_airTemperatureChange, weatherForecastSamples42_rainPercentage,
-                            weatherForecastSamples43_sessionType, weatherForecastSamples43_timeOffset, weatherForecastSamples43_weather, weatherForecastSamples43_trackTemperature, weatherForecastSamples43_trackTemperatureChange, weatherForecastSamples43_airTemperature, weatherForecastSamples43_airTemperatureChange, weatherForecastSamples43_rainPercentage,
-                            weatherForecastSamples44_sessionType, weatherForecastSamples44_timeOffset, weatherForecastSamples44_weather, weatherForecastSamples44_trackTemperature, weatherForecastSamples44_trackTemperatureChange, weatherForecastSamples44_airTemperature, weatherForecastSamples44_airTemperatureChange, weatherForecastSamples44_rainPercentage,
-                            weatherForecastSamples45_sessionType, weatherForecastSamples45_timeOffset, weatherForecastSamples45_weather, weatherForecastSamples45_trackTemperature, weatherForecastSamples45_trackTemperatureChange, weatherForecastSamples45_airTemperature, weatherForecastSamples45_airTemperatureChange, weatherForecastSamples45_rainPercentage,
-                            weatherForecastSamples46_sessionType, weatherForecastSamples46_timeOffset, weatherForecastSamples46_weather, weatherForecastSamples46_trackTemperature, weatherForecastSamples46_trackTemperatureChange, weatherForecastSamples46_airTemperature, weatherForecastSamples46_airTemperatureChange, weatherForecastSamples46_rainPercentage,
-                            weatherForecastSamples47_sessionType, weatherForecastSamples47_timeOffset, weatherForecastSamples47_weather, weatherForecastSamples47_trackTemperature, weatherForecastSamples47_trackTemperatureChange, weatherForecastSamples47_airTemperature, weatherForecastSamples47_airTemperatureChange, weatherForecastSamples47_rainPercentage,
-                            weatherForecastSamples48_sessionType, weatherForecastSamples48_timeOffset, weatherForecastSamples48_weather, weatherForecastSamples48_trackTemperature, weatherForecastSamples48_trackTemperatureChange, weatherForecastSamples48_airTemperature, weatherForecastSamples48_airTemperatureChange, weatherForecastSamples48_rainPercentage,
-                            weatherForecastSamples49_sessionType, weatherForecastSamples49_timeOffset, weatherForecastSamples49_weather, weatherForecastSamples49_trackTemperature, weatherForecastSamples49_trackTemperatureChange, weatherForecastSamples49_airTemperature, weatherForecastSamples49_airTemperatureChange, weatherForecastSamples49_rainPercentage,
-                            weatherForecastSamples50_sessionType, weatherForecastSamples50_timeOffset, weatherForecastSamples50_weather, weatherForecastSamples50_trackTemperature, weatherForecastSamples50_trackTemperatureChange, weatherForecastSamples50_airTemperature, weatherForecastSamples50_airTemperatureChange, weatherForecastSamples50_rainPercentage,
-                            weatherForecastSamples51_sessionType, weatherForecastSamples51_timeOffset, weatherForecastSamples51_weather, weatherForecastSamples51_trackTemperature, weatherForecastSamples51_trackTemperatureChange, weatherForecastSamples51_airTemperature, weatherForecastSamples51_airTemperatureChange, weatherForecastSamples51_rainPercentage,
-                            weatherForecastSamples52_sessionType, weatherForecastSamples52_timeOffset, weatherForecastSamples52_weather, weatherForecastSamples52_trackTemperature, weatherForecastSamples52_trackTemperatureChange, weatherForecastSamples52_airTemperature, weatherForecastSamples52_airTemperatureChange, weatherForecastSamples52_rainPercentage,
-                            weatherForecastSamples53_sessionType, weatherForecastSamples53_timeOffset, weatherForecastSamples53_weather, weatherForecastSamples53_trackTemperature, weatherForecastSamples53_trackTemperatureChange, weatherForecastSamples53_airTemperature, weatherForecastSamples53_airTemperatureChange, weatherForecastSamples53_rainPercentage,
-                            weatherForecastSamples54_sessionType, weatherForecastSamples54_timeOffset, weatherForecastSamples54_weather, weatherForecastSamples54_trackTemperature, weatherForecastSamples54_trackTemperatureChange, weatherForecastSamples54_airTemperature, weatherForecastSamples54_airTemperatureChange, weatherForecastSamples54_rainPercentage,
-                            weatherForecastSamples55_sessionType, weatherForecastSamples55_timeOffset, weatherForecastSamples55_weather, weatherForecastSamples55_trackTemperature, weatherForecastSamples55_trackTemperatureChange, weatherForecastSamples55_airTemperature, weatherForecastSamples55_airTemperatureChange, weatherForecastSamples55_rainPercentage,
-                            weatherForecastSamples56_sessionType, weatherForecastSamples56_timeOffset, weatherForecastSamples56_weather, weatherForecastSamples56_trackTemperature, weatherForecastSamples56_trackTemperatureChange, weatherForecastSamples56_airTemperature, weatherForecastSamples56_airTemperatureChange, weatherForecastSamples56_rainPercentage,
-                            weatherForecastSamples57_sessionType, weatherForecastSamples57_timeOffset, weatherForecastSamples57_weather, weatherForecastSamples57_trackTemperature, weatherForecastSamples57_trackTemperatureChange, weatherForecastSamples57_airTemperature, weatherForecastSamples57_airTemperatureChange, weatherForecastSamples57_rainPercentage,
-                            weatherForecastSamples58_sessionType, weatherForecastSamples58_timeOffset, weatherForecastSamples58_weather, weatherForecastSamples58_trackTemperature, weatherForecastSamples58_trackTemperatureChange, weatherForecastSamples58_airTemperature, weatherForecastSamples58_airTemperatureChange, weatherForecastSamples58_rainPercentage,
-                            weatherForecastSamples59_sessionType, weatherForecastSamples59_timeOffset, weatherForecastSamples59_weather, weatherForecastSamples59_trackTemperature, weatherForecastSamples59_trackTemperatureChange, weatherForecastSamples59_airTemperature, weatherForecastSamples59_airTemperatureChange, weatherForecastSamples59_rainPercentage,
-                            weatherForecastSamples60_sessionType, weatherForecastSamples60_timeOffset, weatherForecastSamples60_weather, weatherForecastSamples60_trackTemperature, weatherForecastSamples60_trackTemperatureChange, weatherForecastSamples60_airTemperature, weatherForecastSamples60_airTemperatureChange, weatherForecastSamples60_rainPercentage,
-                            weatherForecastSamples61_sessionType, weatherForecastSamples61_timeOffset, weatherForecastSamples61_weather, weatherForecastSamples61_trackTemperature, weatherForecastSamples61_trackTemperatureChange, weatherForecastSamples61_airTemperature, weatherForecastSamples61_airTemperatureChange, weatherForecastSamples61_rainPercentage,
-                            weatherForecastSamples62_sessionType, weatherForecastSamples62_timeOffset, weatherForecastSamples62_weather, weatherForecastSamples62_trackTemperature, weatherForecastSamples62_trackTemperatureChange, weatherForecastSamples62_airTemperature, weatherForecastSamples62_airTemperatureChange, weatherForecastSamples62_rainPercentage,
-                            weatherForecastSamples63_sessionType, weatherForecastSamples63_timeOffset, weatherForecastSamples63_weather, weatherForecastSamples63_trackTemperature, weatherForecastSamples63_trackTemperatureChange, weatherForecastSamples63_airTemperature, weatherForecastSamples63_airTemperatureChange, weatherForecastSamples63_rainPercentage,
-                            forecastAccuracy, aiDifficulty, seasonLinkIdentifier, weekendLinkIdentifier, sessionLinkIdentifier, pitStopWindowIdealLap, pitStopWindowLatestLap, pitStopRejoinPosition, steeringAssist, brakingAssist, gearboxAssist, pitAssist,
-                            pitReleaseAssist, ersAssist, drsAssist, dynamicRacingLine, dynamicRacingLineType, gameMode, ruleSet, timeOfDay, sessionLength, speedUnitsLeadPlayer, temperatureUnitsLeadPlayer, speedUnitsSecondaryPlayer, temperatureUnitsSecondaryPlayer,
-                            numSafetyCarPeriods, numVirtualSafetyCarPeriods, numRedFlagPeriods, equalCarPerformance, recoveryMode, flashbackLimit, surfaceType, lowFuelMode, raceStarts, tyreTemperature, pitLaneTyreSim, carDamage, carDamageRate, collisions,
-                            collisionsOffForFirstLapOnly, mpUnsafePitRelease, mpOffForGriefing, cornerCuttingStringency, parcFermeRules, pitStopExperience, safetyCar, safetyCarExperience, formationLap, formationLapExperience, redFlags, affectsLicenceLevelSolo,
-                            affectsLicenceLevelMP, numSessionsInWeekend,
-                            weekendStructure0,
-                            weekendStructure1,
-                            weekendStructure2,
-                            weekendStructure3,
-                            weekendStructure4,
-                            weekendStructure5,
-                            weekendStructure6,
-                            weekendStructure7,
-                            weekendStructure8,
-                            weekendStructure9,
-                            weekendStructure10,
-                            weekendStructure11,
-                            sector2LapDistanceStart,
-                            sector3LapDistanceStart
-                        ) VALUES (
-                            @weather, @trackTemperature, @airTemperature, @totalLaps, @trackLength, @sessionType, @trackId, @formula, @sessionTimeLeft, @sessionDuration, @pitSpeedLimit, @gamePaused, @isSpectating, @spectatorCarIndex, @sliProNativeSupport,
-                            @numMarshalZones,
-                            @marshalZones0_zoneStart, @marshalZones0_zoneFlag,
-                            @marshalZones1_zoneStart, @marshalZones1_zoneFlag,
-                            @marshalZones2_zoneStart, @marshalZones2_zoneFlag,
-                            @marshalZones3_zoneStart, @marshalZones3_zoneFlag,
-                            @marshalZones4_zoneStart, @marshalZones4_zoneFlag,
-                            @marshalZones5_zoneStart, @marshalZones5_zoneFlag,
-                            @marshalZones6_zoneStart, @marshalZones6_zoneFlag,
-                            @marshalZones7_zoneStart, @marshalZones7_zoneFlag,
-                            @marshalZones8_zoneStart, @marshalZones8_zoneFlag,
-                            @marshalZones9_zoneStart, @marshalZones9_zoneFlag,
-                            @marshalZones10_zoneStart, @marshalZones10_zoneFlag,
-                            @marshalZones11_zoneStart, @marshalZones11_zoneFlag,
-                            @marshalZones12_zoneStart, @marshalZones12_zoneFlag,
-                            @marshalZones13_zoneStart, @marshalZones13_zoneFlag,
-                            @marshalZones14_zoneStart, @marshalZones14_zoneFlag,
-                            @marshalZones15_zoneStart, @marshalZones15_zoneFlag,
-                            @marshalZones16_zoneStart, @marshalZones16_zoneFlag,
-                            @marshalZones17_zoneStart, @marshalZones17_zoneFlag,
-                            @marshalZones18_zoneStart, @marshalZones18_zoneFlag,
-                            @marshalZones19_zoneStart, @marshalZones19_zoneFlag,
-                            @marshalZones20_zoneStart, @marshalZones20_zoneFlag,
-                            @safetyCarStatus, @networkGame, @numWeatherForecastSamples,
-                            @weatherForecastSamples0_sessionType, @weatherForecastSamples0_timeOffset, @weatherForecastSamples0_weather, @weatherForecastSamples0_trackTemperature, @weatherForecastSamples0_trackTemperatureChange, @weatherForecastSamples0_airTemperature, @weatherForecastSamples0_airTemperatureChange, @weatherForecastSamples0_rainPercentage,
-                            @weatherForecastSamples1_sessionType, @weatherForecastSamples1_timeOffset, @weatherForecastSamples1_weather, @weatherForecastSamples1_trackTemperature, @weatherForecastSamples1_trackTemperatureChange, @weatherForecastSamples1_airTemperature, @weatherForecastSamples1_airTemperatureChange, @weatherForecastSamples1_rainPercentage,
-                            @weatherForecastSamples2_sessionType, @weatherForecastSamples2_timeOffset, @weatherForecastSamples2_weather, @weatherForecastSamples2_trackTemperature, @weatherForecastSamples2_trackTemperatureChange, @weatherForecastSamples2_airTemperature, @weatherForecastSamples2_airTemperatureChange, @weatherForecastSamples2_rainPercentage,
-                            @weatherForecastSamples3_sessionType, @weatherForecastSamples3_timeOffset, @weatherForecastSamples3_weather, @weatherForecastSamples3_trackTemperature, @weatherForecastSamples3_trackTemperatureChange, @weatherForecastSamples3_airTemperature, @weatherForecastSamples3_airTemperatureChange, @weatherForecastSamples3_rainPercentage,
-                            @weatherForecastSamples4_sessionType, @weatherForecastSamples4_timeOffset, @weatherForecastSamples4_weather, @weatherForecastSamples4_trackTemperature, @weatherForecastSamples4_trackTemperatureChange, @weatherForecastSamples4_airTemperature, @weatherForecastSamples4_airTemperatureChange, @weatherForecastSamples4_rainPercentage,
-                            @weatherForecastSamples5_sessionType, @weatherForecastSamples5_timeOffset, @weatherForecastSamples5_weather, @weatherForecastSamples5_trackTemperature, @weatherForecastSamples5_trackTemperatureChange, @weatherForecastSamples5_airTemperature, @weatherForecastSamples5_airTemperatureChange, @weatherForecastSamples5_rainPercentage,
-                            @weatherForecastSamples6_sessionType, @weatherForecastSamples6_timeOffset, @weatherForecastSamples6_weather, @weatherForecastSamples6_trackTemperature, @weatherForecastSamples6_trackTemperatureChange, @weatherForecastSamples6_airTemperature, @weatherForecastSamples6_airTemperatureChange, @weatherForecastSamples6_rainPercentage,
-                            @weatherForecastSamples7_sessionType, @weatherForecastSamples7_timeOffset, @weatherForecastSamples7_weather, @weatherForecastSamples7_trackTemperature, @weatherForecastSamples7_trackTemperatureChange, @weatherForecastSamples7_airTemperature, @weatherForecastSamples7_airTemperatureChange, @weatherForecastSamples7_rainPercentage,
-                            @weatherForecastSamples8_sessionType, @weatherForecastSamples8_timeOffset, @weatherForecastSamples8_weather, @weatherForecastSamples8_trackTemperature, @weatherForecastSamples8_trackTemperatureChange, @weatherForecastSamples8_airTemperature, @weatherForecastSamples8_airTemperatureChange, @weatherForecastSamples8_rainPercentage,
-                            @weatherForecastSamples9_sessionType, @weatherForecastSamples9_timeOffset, @weatherForecastSamples9_weather, @weatherForecastSamples9_trackTemperature, @weatherForecastSamples9_trackTemperatureChange, @weatherForecastSamples9_airTemperature, @weatherForecastSamples9_airTemperatureChange, @weatherForecastSamples9_rainPercentage,
-                            @weatherForecastSamples10_sessionType, @weatherForecastSamples10_timeOffset, @weatherForecastSamples10_weather, @weatherForecastSamples10_trackTemperature, @weatherForecastSamples10_trackTemperatureChange, @weatherForecastSamples10_airTemperature, @weatherForecastSamples10_airTemperatureChange, @weatherForecastSamples10_rainPercentage,
-                            @weatherForecastSamples11_sessionType, @weatherForecastSamples11_timeOffset, @weatherForecastSamples11_weather, @weatherForecastSamples11_trackTemperature, @weatherForecastSamples11_trackTemperatureChange, @weatherForecastSamples11_airTemperature, @weatherForecastSamples11_airTemperatureChange, @weatherForecastSamples11_rainPercentage,
-                            @weatherForecastSamples12_sessionType, @weatherForecastSamples12_timeOffset, @weatherForecastSamples12_weather, @weatherForecastSamples12_trackTemperature, @weatherForecastSamples12_trackTemperatureChange, @weatherForecastSamples12_airTemperature, @weatherForecastSamples12_airTemperatureChange, @weatherForecastSamples12_rainPercentage,
-                            @weatherForecastSamples13_sessionType, @weatherForecastSamples13_timeOffset, @weatherForecastSamples13_weather, @weatherForecastSamples13_trackTemperature, @weatherForecastSamples13_trackTemperatureChange, @weatherForecastSamples13_airTemperature, @weatherForecastSamples13_airTemperatureChange, @weatherForecastSamples13_rainPercentage,
-                            @weatherForecastSamples14_sessionType, @weatherForecastSamples14_timeOffset, @weatherForecastSamples14_weather, @weatherForecastSamples14_trackTemperature, @weatherForecastSamples14_trackTemperatureChange, @weatherForecastSamples14_airTemperature, @weatherForecastSamples14_airTemperatureChange, @weatherForecastSamples14_rainPercentage,
-                            @weatherForecastSamples15_sessionType, @weatherForecastSamples15_timeOffset, @weatherForecastSamples15_weather, @weatherForecastSamples15_trackTemperature, @weatherForecastSamples15_trackTemperatureChange, @weatherForecastSamples15_airTemperature, @weatherForecastSamples15_airTemperatureChange, @weatherForecastSamples15_rainPercentage,
-                            @weatherForecastSamples16_sessionType, @weatherForecastSamples16_timeOffset, @weatherForecastSamples16_weather, @weatherForecastSamples16_trackTemperature, @weatherForecastSamples16_trackTemperatureChange, @weatherForecastSamples16_airTemperature, @weatherForecastSamples16_airTemperatureChange, @weatherForecastSamples16_rainPercentage,
-                            @weatherForecastSamples17_sessionType, @weatherForecastSamples17_timeOffset, @weatherForecastSamples17_weather, @weatherForecastSamples17_trackTemperature, @weatherForecastSamples17_trackTemperatureChange, @weatherForecastSamples17_airTemperature, @weatherForecastSamples17_airTemperatureChange, @weatherForecastSamples17_rainPercentage,
-                            @weatherForecastSamples18_sessionType, @weatherForecastSamples18_timeOffset, @weatherForecastSamples18_weather, @weatherForecastSamples18_trackTemperature, @weatherForecastSamples18_trackTemperatureChange, @weatherForecastSamples18_airTemperature, @weatherForecastSamples18_airTemperatureChange, @weatherForecastSamples18_rainPercentage,
-                            @weatherForecastSamples19_sessionType, @weatherForecastSamples19_timeOffset, @weatherForecastSamples19_weather, @weatherForecastSamples19_trackTemperature, @weatherForecastSamples19_trackTemperatureChange, @weatherForecastSamples19_airTemperature, @weatherForecastSamples19_airTemperatureChange, @weatherForecastSamples19_rainPercentage,
-                            @weatherForecastSamples20_sessionType, @weatherForecastSamples20_timeOffset, @weatherForecastSamples20_weather, @weatherForecastSamples20_trackTemperature, @weatherForecastSamples20_trackTemperatureChange, @weatherForecastSamples20_airTemperature, @weatherForecastSamples20_airTemperatureChange, @weatherForecastSamples20_rainPercentage,
-                            @weatherForecastSamples21_sessionType, @weatherForecastSamples21_timeOffset, @weatherForecastSamples21_weather, @weatherForecastSamples21_trackTemperature, @weatherForecastSamples21_trackTemperatureChange, @weatherForecastSamples21_airTemperature, @weatherForecastSamples21_airTemperatureChange, @weatherForecastSamples21_rainPercentage,
-                            @weatherForecastSamples22_sessionType, @weatherForecastSamples22_timeOffset, @weatherForecastSamples22_weather, @weatherForecastSamples22_trackTemperature, @weatherForecastSamples22_trackTemperatureChange, @weatherForecastSamples22_airTemperature, @weatherForecastSamples22_airTemperatureChange, @weatherForecastSamples22_rainPercentage,
-                            @weatherForecastSamples23_sessionType, @weatherForecastSamples23_timeOffset, @weatherForecastSamples23_weather, @weatherForecastSamples23_trackTemperature, @weatherForecastSamples23_trackTemperatureChange, @weatherForecastSamples23_airTemperature, @weatherForecastSamples23_airTemperatureChange, @weatherForecastSamples23_rainPercentage,
-                            @weatherForecastSamples24_sessionType, @weatherForecastSamples24_timeOffset, @weatherForecastSamples24_weather, @weatherForecastSamples24_trackTemperature, @weatherForecastSamples24_trackTemperatureChange, @weatherForecastSamples24_airTemperature, @weatherForecastSamples24_airTemperatureChange, @weatherForecastSamples24_rainPercentage,
-                            @weatherForecastSamples25_sessionType, @weatherForecastSamples25_timeOffset, @weatherForecastSamples25_weather, @weatherForecastSamples25_trackTemperature, @weatherForecastSamples25_trackTemperatureChange, @weatherForecastSamples25_airTemperature, @weatherForecastSamples25_airTemperatureChange, @weatherForecastSamples25_rainPercentage,
-                            @weatherForecastSamples26_sessionType, @weatherForecastSamples26_timeOffset, @weatherForecastSamples26_weather, @weatherForecastSamples26_trackTemperature, @weatherForecastSamples26_trackTemperatureChange, @weatherForecastSamples26_airTemperature, @weatherForecastSamples26_airTemperatureChange, @weatherForecastSamples26_rainPercentage,
-                            @weatherForecastSamples27_sessionType, @weatherForecastSamples27_timeOffset, @weatherForecastSamples27_weather, @weatherForecastSamples27_trackTemperature, @weatherForecastSamples27_trackTemperatureChange, @weatherForecastSamples27_airTemperature, @weatherForecastSamples27_airTemperatureChange, @weatherForecastSamples27_rainPercentage,
-                            @weatherForecastSamples28_sessionType, @weatherForecastSamples28_timeOffset, @weatherForecastSamples28_weather, @weatherForecastSamples28_trackTemperature, @weatherForecastSamples28_trackTemperatureChange, @weatherForecastSamples28_airTemperature, @weatherForecastSamples28_airTemperatureChange, @weatherForecastSamples28_rainPercentage,
-                            @weatherForecastSamples29_sessionType, @weatherForecastSamples29_timeOffset, @weatherForecastSamples29_weather, @weatherForecastSamples29_trackTemperature, @weatherForecastSamples29_trackTemperatureChange, @weatherForecastSamples29_airTemperature, @weatherForecastSamples29_airTemperatureChange, @weatherForecastSamples29_rainPercentage,
-                            @weatherForecastSamples30_sessionType, @weatherForecastSamples30_timeOffset, @weatherForecastSamples30_weather, @weatherForecastSamples30_trackTemperature, @weatherForecastSamples30_trackTemperatureChange, @weatherForecastSamples30_airTemperature, @weatherForecastSamples30_airTemperatureChange, @weatherForecastSamples30_rainPercentage,
-                            @weatherForecastSamples31_sessionType, @weatherForecastSamples31_timeOffset, @weatherForecastSamples31_weather, @weatherForecastSamples31_trackTemperature, @weatherForecastSamples31_trackTemperatureChange, @weatherForecastSamples31_airTemperature, @weatherForecastSamples31_airTemperatureChange, @weatherForecastSamples31_rainPercentage,
-                            @weatherForecastSamples32_sessionType, @weatherForecastSamples32_timeOffset, @weatherForecastSamples32_weather, @weatherForecastSamples32_trackTemperature, @weatherForecastSamples32_trackTemperatureChange, @weatherForecastSamples32_airTemperature, @weatherForecastSamples32_airTemperatureChange, @weatherForecastSamples32_rainPercentage,
-                            @weatherForecastSamples33_sessionType, @weatherForecastSamples33_timeOffset, @weatherForecastSamples33_weather, @weatherForecastSamples33_trackTemperature, @weatherForecastSamples33_trackTemperatureChange, @weatherForecastSamples33_airTemperature, @weatherForecastSamples33_airTemperatureChange, @weatherForecastSamples33_rainPercentage,
-                            @weatherForecastSamples34_sessionType, @weatherForecastSamples34_timeOffset, @weatherForecastSamples34_weather, @weatherForecastSamples34_trackTemperature, @weatherForecastSamples34_trackTemperatureChange, @weatherForecastSamples34_airTemperature, @weatherForecastSamples34_airTemperatureChange, @weatherForecastSamples34_rainPercentage,
-                            @weatherForecastSamples35_sessionType, @weatherForecastSamples35_timeOffset, @weatherForecastSamples35_weather, @weatherForecastSamples35_trackTemperature, @weatherForecastSamples35_trackTemperatureChange, @weatherForecastSamples35_airTemperature, @weatherForecastSamples35_airTemperatureChange, @weatherForecastSamples35_rainPercentage,
-                            @weatherForecastSamples36_sessionType, @weatherForecastSamples36_timeOffset, @weatherForecastSamples36_weather, @weatherForecastSamples36_trackTemperature, @weatherForecastSamples36_trackTemperatureChange, @weatherForecastSamples36_airTemperature, @weatherForecastSamples36_airTemperatureChange, @weatherForecastSamples36_rainPercentage,
-                            @weatherForecastSamples37_sessionType, @weatherForecastSamples37_timeOffset, @weatherForecastSamples37_weather, @weatherForecastSamples37_trackTemperature, @weatherForecastSamples37_trackTemperatureChange, @weatherForecastSamples37_airTemperature, @weatherForecastSamples37_airTemperatureChange, @weatherForecastSamples37_rainPercentage,
-                            @weatherForecastSamples38_sessionType, @weatherForecastSamples38_timeOffset, @weatherForecastSamples38_weather, @weatherForecastSamples38_trackTemperature, @weatherForecastSamples38_trackTemperatureChange, @weatherForecastSamples38_airTemperature, @weatherForecastSamples38_airTemperatureChange, @weatherForecastSamples38_rainPercentage,
-                            @weatherForecastSamples39_sessionType, @weatherForecastSamples39_timeOffset, @weatherForecastSamples39_weather, @weatherForecastSamples39_trackTemperature, @weatherForecastSamples39_trackTemperatureChange, @weatherForecastSamples39_airTemperature, @weatherForecastSamples39_airTemperatureChange, @weatherForecastSamples39_rainPercentage,
-                            @weatherForecastSamples40_sessionType, @weatherForecastSamples40_timeOffset, @weatherForecastSamples40_weather, @weatherForecastSamples40_trackTemperature, @weatherForecastSamples40_trackTemperatureChange, @weatherForecastSamples40_airTemperature, @weatherForecastSamples40_airTemperatureChange, @weatherForecastSamples40_rainPercentage,
-                            @weatherForecastSamples41_sessionType, @weatherForecastSamples41_timeOffset, @weatherForecastSamples41_weather, @weatherForecastSamples41_trackTemperature, @weatherForecastSamples41_trackTemperatureChange, @weatherForecastSamples41_airTemperature, @weatherForecastSamples41_airTemperatureChange, @weatherForecastSamples41_rainPercentage,
-                            @weatherForecastSamples42_sessionType, @weatherForecastSamples42_timeOffset, @weatherForecastSamples42_weather, @weatherForecastSamples42_trackTemperature, @weatherForecastSamples42_trackTemperatureChange, @weatherForecastSamples42_airTemperature, @weatherForecastSamples42_airTemperatureChange, @weatherForecastSamples42_rainPercentage,
-                            @weatherForecastSamples43_sessionType, @weatherForecastSamples43_timeOffset, @weatherForecastSamples43_weather, @weatherForecastSamples43_trackTemperature, @weatherForecastSamples43_trackTemperatureChange, @weatherForecastSamples43_airTemperature, @weatherForecastSamples43_airTemperatureChange, @weatherForecastSamples43_rainPercentage,
-                            @weatherForecastSamples44_sessionType, @weatherForecastSamples44_timeOffset, @weatherForecastSamples44_weather, @weatherForecastSamples44_trackTemperature, @weatherForecastSamples44_trackTemperatureChange, @weatherForecastSamples44_airTemperature, @weatherForecastSamples44_airTemperatureChange, @weatherForecastSamples44_rainPercentage,
-                            @weatherForecastSamples45_sessionType, @weatherForecastSamples45_timeOffset, @weatherForecastSamples45_weather, @weatherForecastSamples45_trackTemperature, @weatherForecastSamples45_trackTemperatureChange, @weatherForecastSamples45_airTemperature, @weatherForecastSamples45_airTemperatureChange, @weatherForecastSamples45_rainPercentage,
-                            @weatherForecastSamples46_sessionType, @weatherForecastSamples46_timeOffset, @weatherForecastSamples46_weather, @weatherForecastSamples46_trackTemperature, @weatherForecastSamples46_trackTemperatureChange, @weatherForecastSamples46_airTemperature, @weatherForecastSamples46_airTemperatureChange, @weatherForecastSamples46_rainPercentage,
-                            @weatherForecastSamples47_sessionType, @weatherForecastSamples47_timeOffset, @weatherForecastSamples47_weather, @weatherForecastSamples47_trackTemperature, @weatherForecastSamples47_trackTemperatureChange, @weatherForecastSamples47_airTemperature, @weatherForecastSamples47_airTemperatureChange, @weatherForecastSamples47_rainPercentage,
-                            @weatherForecastSamples48_sessionType, @weatherForecastSamples48_timeOffset, @weatherForecastSamples48_weather, @weatherForecastSamples48_trackTemperature, @weatherForecastSamples48_trackTemperatureChange, @weatherForecastSamples48_airTemperature, @weatherForecastSamples48_airTemperatureChange, @weatherForecastSamples48_rainPercentage,
-                            @weatherForecastSamples49_sessionType, @weatherForecastSamples49_timeOffset, @weatherForecastSamples49_weather, @weatherForecastSamples49_trackTemperature, @weatherForecastSamples49_trackTemperatureChange, @weatherForecastSamples49_airTemperature, @weatherForecastSamples49_airTemperatureChange, @weatherForecastSamples49_rainPercentage,
-                            @weatherForecastSamples50_sessionType, @weatherForecastSamples50_timeOffset, @weatherForecastSamples50_weather, @weatherForecastSamples50_trackTemperature, @weatherForecastSamples50_trackTemperatureChange, @weatherForecastSamples50_airTemperature, @weatherForecastSamples50_airTemperatureChange, @weatherForecastSamples50_rainPercentage,
-                            @weatherForecastSamples51_sessionType, @weatherForecastSamples51_timeOffset, @weatherForecastSamples51_weather, @weatherForecastSamples51_trackTemperature, @weatherForecastSamples51_trackTemperatureChange, @weatherForecastSamples51_airTemperature, @weatherForecastSamples51_airTemperatureChange, @weatherForecastSamples51_rainPercentage,
-                            @weatherForecastSamples52_sessionType, @weatherForecastSamples52_timeOffset, @weatherForecastSamples52_weather, @weatherForecastSamples52_trackTemperature, @weatherForecastSamples52_trackTemperatureChange, @weatherForecastSamples52_airTemperature, @weatherForecastSamples52_airTemperatureChange, @weatherForecastSamples52_rainPercentage,
-                            @weatherForecastSamples53_sessionType, @weatherForecastSamples53_timeOffset, @weatherForecastSamples53_weather, @weatherForecastSamples53_trackTemperature, @weatherForecastSamples53_trackTemperatureChange, @weatherForecastSamples53_airTemperature, @weatherForecastSamples53_airTemperatureChange, @weatherForecastSamples53_rainPercentage,
-                            @weatherForecastSamples54_sessionType, @weatherForecastSamples54_timeOffset, @weatherForecastSamples54_weather, @weatherForecastSamples54_trackTemperature, @weatherForecastSamples54_trackTemperatureChange, @weatherForecastSamples54_airTemperature, @weatherForecastSamples54_airTemperatureChange, @weatherForecastSamples54_rainPercentage,
-                            @weatherForecastSamples55_sessionType, @weatherForecastSamples55_timeOffset, @weatherForecastSamples55_weather, @weatherForecastSamples55_trackTemperature, @weatherForecastSamples55_trackTemperatureChange, @weatherForecastSamples55_airTemperature, @weatherForecastSamples55_airTemperatureChange, @weatherForecastSamples55_rainPercentage,
-                            @weatherForecastSamples56_sessionType, @weatherForecastSamples56_timeOffset, @weatherForecastSamples56_weather, @weatherForecastSamples56_trackTemperature, @weatherForecastSamples56_trackTemperatureChange, @weatherForecastSamples56_airTemperature, @weatherForecastSamples56_airTemperatureChange, @weatherForecastSamples56_rainPercentage,
-                            @weatherForecastSamples57_sessionType, @weatherForecastSamples57_timeOffset, @weatherForecastSamples57_weather, @weatherForecastSamples57_trackTemperature, @weatherForecastSamples57_trackTemperatureChange, @weatherForecastSamples57_airTemperature, @weatherForecastSamples57_airTemperatureChange, @weatherForecastSamples57_rainPercentage,
-                            @weatherForecastSamples58_sessionType, @weatherForecastSamples58_timeOffset, @weatherForecastSamples58_weather, @weatherForecastSamples58_trackTemperature, @weatherForecastSamples58_trackTemperatureChange, @weatherForecastSamples58_airTemperature, @weatherForecastSamples58_airTemperatureChange, @weatherForecastSamples58_rainPercentage,
-                            @weatherForecastSamples59_sessionType, @weatherForecastSamples59_timeOffset, @weatherForecastSamples59_weather, @weatherForecastSamples59_trackTemperature, @weatherForecastSamples59_trackTemperatureChange, @weatherForecastSamples59_airTemperature, @weatherForecastSamples59_airTemperatureChange, @weatherForecastSamples59_rainPercentage,
-                            @weatherForecastSamples60_sessionType, @weatherForecastSamples60_timeOffset, @weatherForecastSamples60_weather, @weatherForecastSamples60_trackTemperature, @weatherForecastSamples60_trackTemperatureChange, @weatherForecastSamples60_airTemperature, @weatherForecastSamples60_airTemperatureChange, @weatherForecastSamples60_rainPercentage,
-                            @weatherForecastSamples61_sessionType, @weatherForecastSamples61_timeOffset, @weatherForecastSamples61_weather, @weatherForecastSamples61_trackTemperature, @weatherForecastSamples61_trackTemperatureChange, @weatherForecastSamples61_airTemperature, @weatherForecastSamples61_airTemperatureChange, @weatherForecastSamples61_rainPercentage,
-                            @weatherForecastSamples62_sessionType, @weatherForecastSamples62_timeOffset, @weatherForecastSamples62_weather, @weatherForecastSamples62_trackTemperature, @weatherForecastSamples62_trackTemperatureChange, @weatherForecastSamples62_airTemperature, @weatherForecastSamples62_airTemperatureChange, @weatherForecastSamples62_rainPercentage,
-                            @weatherForecastSamples63_sessionType, @weatherForecastSamples63_timeOffset, @weatherForecastSamples63_weather, @weatherForecastSamples63_trackTemperature, @weatherForecastSamples63_trackTemperatureChange, @weatherForecastSamples63_airTemperature, @weatherForecastSamples63_airTemperatureChange, @weatherForecastSamples63_rainPercentage,
-                            @forecastAccuracy,
-                            @aiDifficulty, @seasonLinkIdentifier, @weekendLinkIdentifier, @sessionLinkIdentifier, @pitStopWindowIdealLap, @pitStopWindowLatestLap, @pitStopRejoinPosition, @steeringAssist, @brakingAssist, @gearboxAssist, @pitAssist, @pitReleaseAssist,
-                            @ersAssist, @drsAssist, @dynamicRacingLine, @dynamicRacingLineType, @gameMode, @ruleSet, @timeOfDay, @sessionLength, @speedUnitsLeadPlayer, @temperatureUnitsLeadPlayer, @speedUnitsSecondaryPlayer, @temperatureUnitsSecondaryPlayer,
-                            @numSafetyCarPeriods, @numVirtualSafetyCarPeriods, @numRedFlagPeriods, @equalCarPerformance, @recoveryMode, @flashbackLimit, @surfaceType, @lowFuelMode, @raceStarts, @tyreTemperature, @pitLaneTyreSim, @carDamage, @carDamageRate,
-                            @collisions, @collisionsOffForFirstLapOnly, @mpUnsafePitRelease, @mpOffForGriefing, @cornerCuttingStringency, @parcFermeRules, @pitStopExperience, @safetyCar, @safetyCarExperience, @formationLap, @formationLapExperience, @redFlags,
-                            @affectsLicenceLevelSolo, @affectsLicenceLevelMP, @numSessionsInWeekend,
-                            @weekendStructure0,
-                            @weekendStructure1,
-                            @weekendStructure2,
-                            @weekendStructure3,
-                            @weekendStructure4,
-                            @weekendStructure5,
-                            @weekendStructure6,
-                            @weekendStructure7,
-                            @weekendStructure8,
-                            @weekendStructure9,
-                            @weekendStructure10,
-                            @weekendStructure11,
-                            @sector2LapDistanceStart,
-                            @sector3LapDistanceStart
-                            )", conn
-                    );
-                    cmd.Parameters.AddWithValue("@weather", dataSession.weather);
-                    cmd.Parameters.AddWithValue("@trackTemperature", dataSession.trackTemperature);
-                    cmd.Parameters.AddWithValue("@airTemperature", dataSession.airTemperature);
-                    cmd.Parameters.AddWithValue("@totalLaps", dataSession.totalLaps);
-                    cmd.Parameters.AddWithValue("@trackLength", dataSession.trackLength);
-                    cmd.Parameters.AddWithValue("@sessionType", dataSession.sessionType);
-                    cmd.Parameters.AddWithValue("@trackId", dataSession.trackId);
-                    cmd.Parameters.AddWithValue("@formula", dataSession.formula);
-                    cmd.Parameters.AddWithValue("@sessionTimeLeft", dataSession.sessionTimeLeft);
-                    cmd.Parameters.AddWithValue("@sessionDuration", dataSession.sessionDuration);
-                    cmd.Parameters.AddWithValue("@pitSpeedLimit", dataSession.pitSpeedLimit);
-                    cmd.Parameters.AddWithValue("@gamePaused", dataSession.gamePaused);
-                    cmd.Parameters.AddWithValue("@isSpectating", dataSession.isSpectating);
-                    cmd.Parameters.AddWithValue("@spectatorCarIndex", dataSession.spectatorCarIndex);
-                    cmd.Parameters.AddWithValue("@sliProNativeSupport", dataSession.sliProNativeSupport);
-                    cmd.Parameters.AddWithValue("@numMarshalZones", dataSession.numMarshalZones);
-                    for (int i = 0; i < 21; i++)
-                    {
-                        cmd.Parameters.AddWithValue($"@marshalZones{i}_zoneStart", dataSession.marshalZones[i].zoneStart);
-                        cmd.Parameters.AddWithValue($"@marshalZones{i}_zoneFlag", dataSession.marshalZones[i].zoneFlag);
-                    }
-                    cmd.Parameters.AddWithValue("@safetyCarStatus", dataSession.safetyCarStatus);
-                    cmd.Parameters.AddWithValue("@networkGame", dataSession.networkGame);
-                    cmd.Parameters.AddWithValue("@numWeatherForecastSamples", dataSession.numWeatherForecastSamples);
-                    for (int i = 0; i < 64; i++)
-                    {
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_sessionType", dataSession.weatherForecastSamples[i].sessionType);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_timeOffset", dataSession.weatherForecastSamples[i].timeOffset);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_weather", dataSession.weatherForecastSamples[i].weather);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_trackTemperature", dataSession.weatherForecastSamples[i].trackTemperature);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_trackTemperatureChange", dataSession.weatherForecastSamples[i].trackTemperatureChange);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_airTemperature", dataSession.weatherForecastSamples[i].airTemperature);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_airTemperatureChange", dataSession.weatherForecastSamples[i].airTemperatureChange);
-                        cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_rainPercentage", dataSession.weatherForecastSamples[i].rainPercentage);
-                    }
-                    cmd.Parameters.AddWithValue("@forecastAccuracy", dataSession.forecastAccuracy);
-                    cmd.Parameters.AddWithValue("@aiDifficulty", dataSession.aiDifficulty);
-                    cmd.Parameters.AddWithValue("@seasonLinkIdentifier", dataSession.seasonLinkIdentifier);
-                    cmd.Parameters.AddWithValue("@weekendLinkIdentifier", dataSession.weekendLinkIdentifier);
-                    cmd.Parameters.AddWithValue("@sessionLinkIdentifier", dataSession.sessionLinkIdentifier);
-                    cmd.Parameters.AddWithValue("@pitStopWindowIdealLap", dataSession.pitStopWindowIdealLap);
-                    cmd.Parameters.AddWithValue("@pitStopWindowLatestLap", dataSession.pitStopWindowLatestLap);
-                    cmd.Parameters.AddWithValue("@pitStopRejoinPosition", dataSession.pitStopRejoinPosition);
-                    cmd.Parameters.AddWithValue("@steeringAssist", dataSession.steeringAssist);
-                    cmd.Parameters.AddWithValue("@brakingAssist", dataSession.brakingAssist);
-                    cmd.Parameters.AddWithValue("@gearboxAssist", dataSession.gearboxAssist);
-                    cmd.Parameters.AddWithValue("@pitAssist", dataSession.pitAssist);
-                    cmd.Parameters.AddWithValue("@pitReleaseAssist", dataSession.pitReleaseAssist);
-                    cmd.Parameters.AddWithValue("@ERSAssist", dataSession.ERSAssist);
-                    cmd.Parameters.AddWithValue("@DRSAssist", dataSession.DRSAssist);
-                    cmd.Parameters.AddWithValue("@dynamicRacingLine", dataSession.dynamicRacingLine);
-                    cmd.Parameters.AddWithValue("@dynamicRacingLineType", dataSession.dynamicRacingLineType);
-                    cmd.Parameters.AddWithValue("@gameMode", dataSession.gameMode);
-                    cmd.Parameters.AddWithValue("@ruleSet", dataSession.ruleSet);
-                    cmd.Parameters.AddWithValue("@timeOfDay", dataSession.timeOfDay);
-                    cmd.Parameters.AddWithValue("@sessionLength", dataSession.sessionLength);
-                    cmd.Parameters.AddWithValue("@speedUnitsLeadPlayer", dataSession.speedUnitsLeadPlayer);
-                    cmd.Parameters.AddWithValue("@temperatureUnitsLeadPlayer", dataSession.temperatureUnitsLeadPlayer);
-                    cmd.Parameters.AddWithValue("@speedUnitsSecondaryPlayer", dataSession.speedUnitsSecondaryPlayer);
-                    cmd.Parameters.AddWithValue("@temperatureUnitsSecondaryPlayer", dataSession.temperatureUnitsSecondaryPlayer);
-                    cmd.Parameters.AddWithValue("@numSafetyCarPeriods", dataSession.numSafetyCarPeriods);
-                    cmd.Parameters.AddWithValue("@numVirtualSafetyCarPeriods", dataSession.numVirtualSafetyCarPeriods);
-                    cmd.Parameters.AddWithValue("@numRedFlagPeriods", dataSession.numRedFlagPeriods);
-                    cmd.Parameters.AddWithValue("@equalCarPerformance", dataSession.equalCarPerformance);
-                    cmd.Parameters.AddWithValue("@recoveryMode", dataSession.recoveryMode);
-                    cmd.Parameters.AddWithValue("@flashbackLimit", dataSession.flashbackLimit);
-                    cmd.Parameters.AddWithValue("@surfaceType", dataSession.surfaceType);
-                    cmd.Parameters.AddWithValue("@lowFuelMode", dataSession.lowFuelMode);
-                    cmd.Parameters.AddWithValue("@raceStarts", dataSession.raceStarts);
-                    cmd.Parameters.AddWithValue("@tyreTemperature", dataSession.tyreTemperature);
-                    cmd.Parameters.AddWithValue("@pitLaneTyreSim", dataSession.pitLaneTyreSim);
-                    cmd.Parameters.AddWithValue("@carDamage", dataSession.carDamage);
-                    cmd.Parameters.AddWithValue("@carDamageRate", dataSession.carDamageRate);
-                    cmd.Parameters.AddWithValue("@collisions", dataSession.collisions);
-                    cmd.Parameters.AddWithValue("@collisionsOffForFirstLapOnly", dataSession.collisionsOffForFirstLapOnly);
-                    cmd.Parameters.AddWithValue("@mpUnsafePitRelease", dataSession.mpUnsafePitRelease);
-                    cmd.Parameters.AddWithValue("@mpOffForGriefing", dataSession.mpOffForGriefing);
-                    cmd.Parameters.AddWithValue("@cornerCuttingStringency", dataSession.cornerCuttingStringency);
-                    cmd.Parameters.AddWithValue("@parcFermeRules", dataSession.parcFermeRules);
-                    cmd.Parameters.AddWithValue("@pitStopExperience", dataSession.pitStopExperience);
-                    cmd.Parameters.AddWithValue("@safetyCar", dataSession.safetyCar);
-                    cmd.Parameters.AddWithValue("@safetyCarExperience", dataSession.safetyCarExperience);
-                    cmd.Parameters.AddWithValue("@formationLap", dataSession.formationLap);
-                    cmd.Parameters.AddWithValue("@formationLapExperience", dataSession.formationLapExperience);
-                    cmd.Parameters.AddWithValue("@redFlags", dataSession.redFlags);
-                    cmd.Parameters.AddWithValue("@affectsLicenceLevelSolo", dataSession.affectsLicenceLevelSolo);
-                    cmd.Parameters.AddWithValue("@affectsLicenceLevelMP", dataSession.affectsLicenceLevelMP);
-                    cmd.Parameters.AddWithValue("@numSessionsInWeekend", dataSession.numSessionsInWeekend);
-                    for (int i = 0; i < 12; i++)
-                    {
-                        cmd.Parameters.AddWithValue($"@weekendStructure{i}", dataSession.weekendStructure[i]);
-                    }
-                    cmd.Parameters.AddWithValue("@sector2LapDistanceStart", dataSession.sector2LapDistanceStart);
-                    cmd.Parameters.AddWithValue("@sector3LapDistanceStart", dataSession.sector3LapDistanceStart);
-                    try
-                    {
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"SESSION INSERT error : {ex}");
-                        continue;
-                    }
-                    continue;
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1285)
-                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Lap of 1285B
-                    /*
-                    private static PacketLapData ReadPacketLapData(BinaryReader br)
-                    {//id=2, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
-                        PacketLapData packetLapData = new();
-                        try
-                        {
-                            packetLapData.header = ReadPacketHeader(br);
-                            packetLapData.lapData = new LapData[22];
-                            for (int i = 0; i < 22; i++) packetLapData.lapData[i] = ReadLapData(br);
-                            packetLapData.timeTrialPBCarIdx = br.ReadByte();
-                            packetLapData.timeTrialRivalCarIdx = br.ReadByte();
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketLapData packet. Skipping...");
-                        }
-                        return packetLapData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("Lap");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 45)
-                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Event of 45B
-                    
-                    
-                    
-                    
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("Event");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1350)
-                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Participants of 1350B
-                    /*
-                    private static PacketParticipantsData ReadPacketParticipantsData(BinaryReader br)
-                    {//id=4,//id=1, Packets sent on Frame 1
-                        PacketParticipantsData packetParticipantsData = new();
-                        try
-                        {
-                            packetParticipantsData.header = ReadPacketHeader(br);
-                            packetParticipantsData.numActiveCars = br.ReadByte();
-                            packetParticipantsData.participants = new ParticipantData[22];
-                            for (int i = 0; i < 22; i++) packetParticipantsData.participants[i] = ReadParticipantData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketParticipantsData packet. Skipping...");
-                        }
-                        return packetParticipantsData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("Participants");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1133)
-                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarSetup of 1133B
-                    /*
-                    private static PacketCarSetupData ReadPacketCarSetupData(BinaryReader br)
-                    {//id=5,Packets sent on Frame 1, Packets sent on Frame 31
-                        PacketCarSetupData packetCarSetupData = new();
-                        try
-                        {
-                            packetCarSetupData.header = ReadPacketHeader(br);
-                            packetCarSetupData.carSetups = new CarSetupData[22];
-                            for (int i = 0; i < 22; i++) packetCarSetupData.carSetups[i] = ReadCarSetupData(br);
-                            packetCarSetupData.nextFrontWingValue = br.ReadSingle();
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketCarSetupData packet. Skipping...");
-                        }
-                        return packetCarSetupData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("CarSetup");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1352)
-                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarTelemetry of 1352B
-                    Header headerCarTelemetry = new Header
-                    {
-                        packetFormat = br.ReadUInt16(),
-                        gameYear = br.ReadByte(),
-                        gameMajorVersion = br.ReadByte(),
-                        gameMinorVersion = br.ReadByte(),
-                        packetVersion = br.ReadByte(),
-                        packetId = br.ReadByte(),
-                        sessionUID = br.ReadUInt64(),
-                        sessionTime = br.ReadSingle(),
-                        frameIdentifier = br.ReadUInt32(),
-                        overallFrameIdentifier = br.ReadUInt32(),
-                        playerCarIndex = br.ReadByte(),
-                        secondaryPlayerCarIndex = br.ReadByte()
-                    };
-                    CarTelemetry[] carTelemetry = new CarTelemetry[22];
-                    for (int i = 0; i < 22; i++)
-                    {
-                        carTelemetry[i] = ReadCarTelemetry(br);
-                    }
-                    byte mfdPanelIndex = br.ReadByte();
-                    byte mfdPanelIndexSecondaryPlayer = br.ReadByte();
-                    sbyte suggestedGear = br.ReadSByte();
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    var dataCarTelemetry = carTelemetry[headerCarTelemetry.playerCarIndex];
-                    
-                    using var conn = new MySqlConnection(connectionString);
-                    await conn.OpenAsync();
-
-                    using var cmd = new MySqlCommand(@"
-                        INSERT INTO CARTELEMETRY (
-                            speed, throttle, steer, brake, clutch, gear, engineRPM, drs, revLightsPercent, revLightsBitValue,
-                            brakesTemperature0, brakesTemperature1, brakesTemperature2, brakesTemperature3,
-                            tyresSurfaceTemperature0, tyresSurfaceTemperature1, tyresSurfaceTemperature2, tyresSurfaceTemperature3,
-                            tyresInnerTemperature0, tyresInnerTemperature1, tyresInnerTemperature2, tyresInnerTemperature3,
-                            engineTemperature,
-                            tyresPressure0, tyresPressure1, tyresPressure2, tyresPressure3,
-                            surfaceType0, surfaceType1, surfaceType2, surfaceType3
-                        ) VALUES (
-                            @speed, @throttle, @steer, @brake, @clutch, @gear, @engineRPM, @drs, @revLightsPercent, @revLightsBitValue,
-                            @brakesTemperature0, @brakesTemperature1, @brakesTemperature2, @brakesTemperature3,
-                            @tyresSurfaceTemperature0, @tyresSurfaceTemperature1, @tyresSurfaceTemperature2, @tyresSurfaceTemperature3,
-                            @tyresInnerTemperature0, @tyresInnerTemperature1, @tyresInnerTemperature2, @tyresInnerTemperature3,
-                            @engineTemperature,
-                            @tyresPressure0, @tyresPressure1, @tyresPressure2, @tyresPressure3,
-                            @surfaceType0, @surfaceType1, @surfaceType2, @surfaceType3
-                        )", conn
-                    );
-                    cmd.Parameters.AddWithValue("@speed", dataCarTelemetry.speed);
-                    cmd.Parameters.AddWithValue("@throttle", dataCarTelemetry.throttle);
-                    cmd.Parameters.AddWithValue("@steer", dataCarTelemetry.steer);
-                    cmd.Parameters.AddWithValue("@brake", dataCarTelemetry.brake);
-                    cmd.Parameters.AddWithValue("@clutch", dataCarTelemetry.clutch);
-                    cmd.Parameters.AddWithValue("@gear", dataCarTelemetry.gear);
-                    cmd.Parameters.AddWithValue("@engineRPM", dataCarTelemetry.engineRPM);
-                    cmd.Parameters.AddWithValue("@drs", dataCarTelemetry.drs);
-                    cmd.Parameters.AddWithValue("@revLightsPercent", dataCarTelemetry.revLightsPercent);
-                    cmd.Parameters.AddWithValue("@revLightsBitValue", dataCarTelemetry.revLightsBitValue);
-                    cmd.Parameters.AddWithValue("@brakesTemperature0", dataCarTelemetry.brakesTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature1", dataCarTelemetry.brakesTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature2", dataCarTelemetry.brakesTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@brakesTemperature3", dataCarTelemetry.brakesTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature0", dataCarTelemetry.tyresSurfaceTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature1", dataCarTelemetry.tyresSurfaceTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature2", dataCarTelemetry.tyresSurfaceTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresSurfaceTemperature3", dataCarTelemetry.tyresSurfaceTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature0", dataCarTelemetry.tyresInnerTemperature?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature1", dataCarTelemetry.tyresInnerTemperature?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature2", dataCarTelemetry.tyresInnerTemperature?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresInnerTemperature3", dataCarTelemetry.tyresInnerTemperature?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@engineTemperature", dataCarTelemetry.engineTemperature);
-                    cmd.Parameters.AddWithValue("@tyresPressure0", dataCarTelemetry.tyresPressure?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure1", dataCarTelemetry.tyresPressure?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure2", dataCarTelemetry.tyresPressure?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@tyresPressure3", dataCarTelemetry.tyresPressure?[3] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType0", dataCarTelemetry.surfaceType?[0] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType1", dataCarTelemetry.surfaceType?[1] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType2", dataCarTelemetry.surfaceType?[2] ?? 0);
-                    cmd.Parameters.AddWithValue("@surfaceType3", dataCarTelemetry.surfaceType?[3] ?? 0);
-                    try
-                    {
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"CARTELEMETRY INSERT error : {ex}");
-                        continue;
-                    }
-                    continue;
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1239)
-                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarStatus of 1239B
-                    /*
-                    private static PacketCarStatusData ReadPacketCarStatusData(BinaryReader br)
-                    {//id=7, Packets sent on Frame 1, Packets sent on Frame 2, Packets sent on Frame 31
-                        PacketCarStatusData packetCarStatusData = new();
-                        try
-                        {
-                            packetCarStatusData.header = ReadPacketHeader(br);
-                            packetCarStatusData.carStatusData = new CarStatusData[22];
-                            for (int i = 0; i < 22; i++) packetCarStatusData.carStatusData[i] = ReadCarStatusData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketCarStatusData packet. Skipping...");
-                        }
-                        return packetCarStatusData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("CarStatus");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1020)
-                {//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of FinalClassification of 1020B
-                    /*
-                    private static PacketFinalClassificationData ReadPacketFinalClassificationData(BinaryReader br)
-                    {//id=8, 
-                        PacketFinalClassificationData packetFinalClassificationData = new();
-                        try
-                        {
-                            packetFinalClassificationData.header = ReadPacketHeader(br);
-                            packetFinalClassificationData.numCars = br.ReadByte();
-                            packetFinalClassificationData.classificationData = new FinalClassificationData[22];
-                            for (int i = 0; i < 22; i++) packetFinalClassificationData.classificationData[i] = ReadFinalClassificationData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketFinalClassificationData packet. Skipping...");
-                        }
-                        return packetFinalClassificationData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("FinalClassification");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1306)
-                {//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of LobbyInfo of 1306B
-                    /*
-                    private static PacketLobbyInfoData ReadPacketLobbyInfoData(BinaryReader br)
-                    {//id=9, 
-                        PacketLobbyInfoData packetLobbyInfoData = new();
-                        try
-                        {
-                            packetLobbyInfoData.header = ReadPacketHeader(br);
-                            packetLobbyInfoData.numPlayers = br.ReadByte();
-                            packetLobbyInfoData.lobbyPlayers = new LobbyInfoData[22];
-                            for (int i = 0; i < 22; i++) packetLobbyInfoData.lobbyPlayers[i] = ReadLobbyInfoData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketLobbyInfoData packet. Skipping...");
-                        }
-                        return packetLobbyInfoData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("LobbyInfo");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 953)
-                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarDamage of 953B
-                    /*
-                    private static PacketCarDamageData ReadPacketCarDamageData(BinaryReader br)
-                    {//id=10, Packets sent on Frame 1, Packets sent on Frame 31
-                        PacketCarDamageData packetCarDamageData = new();
-                        try
-                        {
-                            packetCarDamageData.header = ReadPacketHeader(br);
-                            packetCarDamageData.carDamageData = new CarDamageData[22];
-                            for (int i = 0; i < 22; i++) packetCarDamageData.carDamageData[i] = ReadCarDamageData(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketCarDamageData packet. Skipping...");
-                        }
-                        return packetCarDamageData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("CarDamage");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 1460)
-                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of SessionHistory of 1460B
-                    
-                    
-                    
-                    
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("SessionHistory");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 231)
-                {//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TyreSet of 231B
-                    /*
-                    private static PacketTyreSetsData ReadPacketTyreSetsData(BinaryReader br)
-                    {//id=12, 
-                        PacketTyreSetsData packetTyreSetsData = new();
-                        try
-                        {
-                            packetTyreSetsData.header = ReadPacketHeader(br);
-                            packetTyreSetsData.carIdx = br.ReadByte();
-                            packetTyreSetsData.tyreSetData = new TyreSetData[20];
-                            for (int i = 0; i < 20; i++) packetTyreSetsData.tyreSetData[i] = ReadTyreSetData(br);
-                            packetTyreSetsData.fittedIdx = br.ReadByte();
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketTyreSetsData packet. Skipping...");
-                        }
-                        return packetTyreSetsData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("TyreSet");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 237)
-                {//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of MotionEx of 237B
-                    
-                    
-                    
-                    
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("MotionEx");
-                }
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                else if (packet.Length == 101)
-                {//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TimeTrial of 101B
-                    /*
-                    private static PacketTimeTrialData ReadPacketTimeTrialData(BinaryReader br)
-                    {//id=14, 
-                        PacketTimeTrialData packetTimeTrialData = new();
-                        try
-                        {
-                            packetTimeTrialData.header = ReadPacketHeader(br);
-                            packetTimeTrialData.playerSessionBestDataSet = ReadTimeTrialDataSet(br);
-                            packetTimeTrialData.personalBestDataSet = ReadTimeTrialDataSet(br);
-                            packetTimeTrialData.rivalDataSet = ReadTimeTrialDataSet(br);
-                        }
-                        catch (EndOfStreamException)
-                        {
-                            Console.WriteLine("Warning: Incomplete PacketTimeTrialData packet. Skipping...");
-                        }
-                        return packetTimeTrialData;
-                    }
-                    */
-                 //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
-                    
-                    
-                    
-                    
-                    Console.WriteLine("TimeTrial");
-                }
-                else
+                switch (packet.Length)
                 {
-                    Console.WriteLine(packet.Length);
+                    case 1349:
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarMotion of 1349B
+                        var headerCarMotion = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carMotion = new CarMotion[22];
+                        for (var i = 0; i < 22; i++) carMotion[i] = ReadCarMotion(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataCarMotion = carMotion[headerCarMotion.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO CARMOTION (
+                                worldPositionX, worldPositionY, worldPositionZ,
+                                worldVelocityX, worldVelocityY, worldVelocityZ,
+                                worldForwardDirX, worldForwardDirY, worldForwardDirZ,
+                                worldRightDirX, worldRightDirY, worldRightDirZ,
+                                gForceLateral, gForceLongitudinal, gForceVertical,
+                                yaw, pitch, roll
+                            ) VALUES (
+                                @worldPositionX, @worldPositionY, @worldPositionZ,
+                                @worldVelocityX, @worldVelocityY, @worldVelocityZ,
+                                @worldForwardDirX, @worldForwardDirY, @worldForwardDirZ,
+                                @worldRightDirX, @worldRightDirY, @worldRightDirZ,
+                                @gForceLateral, @gForceLongitudinal, @gForceVertical,
+                                @yaw, @pitch, @roll
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@worldPositionX", dataCarMotion.worldPositionX);
+                            cmd.Parameters.AddWithValue("@worldPositionY", dataCarMotion.worldPositionY);
+                            cmd.Parameters.AddWithValue("@worldPositionZ", dataCarMotion.worldPositionZ);
+                            cmd.Parameters.AddWithValue("@worldVelocityX", dataCarMotion.worldVelocityX);
+                            cmd.Parameters.AddWithValue("@worldVelocityY", dataCarMotion.worldVelocityY);
+                            cmd.Parameters.AddWithValue("@worldVelocityZ", dataCarMotion.worldVelocityZ);
+                            cmd.Parameters.AddWithValue("@worldForwardDirX", dataCarMotion.worldForwardDirX);
+                            cmd.Parameters.AddWithValue("@worldForwardDirY", dataCarMotion.worldForwardDirY);
+                            cmd.Parameters.AddWithValue("@worldForwardDirZ", dataCarMotion.worldForwardDirZ);
+                            cmd.Parameters.AddWithValue("@worldRightDirX", dataCarMotion.worldRightDirX);
+                            cmd.Parameters.AddWithValue("@worldRightDirY", dataCarMotion.worldRightDirY);
+                            cmd.Parameters.AddWithValue("@worldRightDirZ", dataCarMotion.worldRightDirZ);
+                            cmd.Parameters.AddWithValue("@gForceLateral", dataCarMotion.gForceLateral);
+                            cmd.Parameters.AddWithValue("@gForceLongitudinal", dataCarMotion.gForceLongitudinal);
+                            cmd.Parameters.AddWithValue("@gForceVertical", dataCarMotion.gForceVertical);
+                            cmd.Parameters.AddWithValue("@yaw", dataCarMotion.yaw);
+                            cmd.Parameters.AddWithValue("@pitch", dataCarMotion.pitch);
+                            cmd.Parameters.AddWithValue("@roll", dataCarMotion.roll);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"CARMOTION INSERT error : {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 753:
+                        //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Session of 753B
+                        br.ReadUInt16(); //packetFormat
+                        br.ReadByte(); //gameYear
+                        br.ReadByte(); //gameMajorVersion
+                        br.ReadByte(); //gameMinorVersion
+                        br.ReadByte(); //packetVersion
+                        br.ReadByte(); //packetId
+                        br.ReadUInt64(); //sessionUID
+                        br.ReadSingle(); //sessionTime
+                        br.ReadUInt32(); //frameIdentifier
+                        br.ReadUInt32(); //overallFrameIdentifier
+                        br.ReadByte(); //playerCarIndex
+                        br.ReadByte(); //secondaryPlayerCarIndex
+                        var dataSession = ReadSession(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO SESSION (
+                                weather, trackTemperature, airTemperature, totalLaps, trackLength, sessionType, trackId, formula, sessionTimeLeft, sessionDuration, pitSpeedLimit, gamePaused, isSpectating, spectatorCarIndex, sliProNativeSupport, numMarshalZones,
+                                marshalZones0_zoneStart, marshalZones0_zoneFlag,
+                                marshalZones1_zoneStart, marshalZones1_zoneFlag,
+                                marshalZones2_zoneStart, marshalZones2_zoneFlag,
+                                marshalZones3_zoneStart, marshalZones3_zoneFlag,
+                                marshalZones4_zoneStart, marshalZones4_zoneFlag,
+                                marshalZones5_zoneStart, marshalZones5_zoneFlag,
+                                marshalZones6_zoneStart, marshalZones6_zoneFlag,
+                                marshalZones7_zoneStart, marshalZones7_zoneFlag,
+                                marshalZones8_zoneStart, marshalZones8_zoneFlag,
+                                marshalZones9_zoneStart, marshalZones9_zoneFlag,
+                                marshalZones10_zoneStart, marshalZones10_zoneFlag,
+                                marshalZones11_zoneStart, marshalZones11_zoneFlag,
+                                marshalZones12_zoneStart, marshalZones12_zoneFlag,
+                                marshalZones13_zoneStart, marshalZones13_zoneFlag,
+                                marshalZones14_zoneStart, marshalZones14_zoneFlag,
+                                marshalZones15_zoneStart, marshalZones15_zoneFlag,
+                                marshalZones16_zoneStart, marshalZones16_zoneFlag,
+                                marshalZones17_zoneStart, marshalZones17_zoneFlag,
+                                marshalZones18_zoneStart, marshalZones18_zoneFlag,
+                                marshalZones19_zoneStart, marshalZones19_zoneFlag,
+                                marshalZones20_zoneStart, marshalZones20_zoneFlag,
+                                safetyCarStatus, networkGame, numWeatherForecastSamples,
+                                weatherForecastSamples0_sessionType, weatherForecastSamples0_timeOffset, weatherForecastSamples0_weather, weatherForecastSamples0_trackTemperature, weatherForecastSamples0_trackTemperatureChange, weatherForecastSamples0_airTemperature, weatherForecastSamples0_airTemperatureChange, weatherForecastSamples0_rainPercentage,
+                                weatherForecastSamples1_sessionType, weatherForecastSamples1_timeOffset, weatherForecastSamples1_weather, weatherForecastSamples1_trackTemperature, weatherForecastSamples1_trackTemperatureChange, weatherForecastSamples1_airTemperature, weatherForecastSamples1_airTemperatureChange, weatherForecastSamples1_rainPercentage,
+                                weatherForecastSamples2_sessionType, weatherForecastSamples2_timeOffset, weatherForecastSamples2_weather, weatherForecastSamples2_trackTemperature, weatherForecastSamples2_trackTemperatureChange, weatherForecastSamples2_airTemperature, weatherForecastSamples2_airTemperatureChange, weatherForecastSamples2_rainPercentage,
+                                weatherForecastSamples3_sessionType, weatherForecastSamples3_timeOffset, weatherForecastSamples3_weather, weatherForecastSamples3_trackTemperature, weatherForecastSamples3_trackTemperatureChange, weatherForecastSamples3_airTemperature, weatherForecastSamples3_airTemperatureChange, weatherForecastSamples3_rainPercentage,
+                                weatherForecastSamples4_sessionType, weatherForecastSamples4_timeOffset, weatherForecastSamples4_weather, weatherForecastSamples4_trackTemperature, weatherForecastSamples4_trackTemperatureChange, weatherForecastSamples4_airTemperature, weatherForecastSamples4_airTemperatureChange, weatherForecastSamples4_rainPercentage,
+                                weatherForecastSamples5_sessionType, weatherForecastSamples5_timeOffset, weatherForecastSamples5_weather, weatherForecastSamples5_trackTemperature, weatherForecastSamples5_trackTemperatureChange, weatherForecastSamples5_airTemperature, weatherForecastSamples5_airTemperatureChange, weatherForecastSamples5_rainPercentage,
+                                weatherForecastSamples6_sessionType, weatherForecastSamples6_timeOffset, weatherForecastSamples6_weather, weatherForecastSamples6_trackTemperature, weatherForecastSamples6_trackTemperatureChange, weatherForecastSamples6_airTemperature, weatherForecastSamples6_airTemperatureChange, weatherForecastSamples6_rainPercentage,
+                                weatherForecastSamples7_sessionType, weatherForecastSamples7_timeOffset, weatherForecastSamples7_weather, weatherForecastSamples7_trackTemperature, weatherForecastSamples7_trackTemperatureChange, weatherForecastSamples7_airTemperature, weatherForecastSamples7_airTemperatureChange, weatherForecastSamples7_rainPercentage,
+                                weatherForecastSamples8_sessionType, weatherForecastSamples8_timeOffset, weatherForecastSamples8_weather, weatherForecastSamples8_trackTemperature, weatherForecastSamples8_trackTemperatureChange, weatherForecastSamples8_airTemperature, weatherForecastSamples8_airTemperatureChange, weatherForecastSamples8_rainPercentage,
+                                weatherForecastSamples9_sessionType, weatherForecastSamples9_timeOffset, weatherForecastSamples9_weather, weatherForecastSamples9_trackTemperature, weatherForecastSamples9_trackTemperatureChange, weatherForecastSamples9_airTemperature, weatherForecastSamples9_airTemperatureChange, weatherForecastSamples9_rainPercentage,
+                                weatherForecastSamples10_sessionType, weatherForecastSamples10_timeOffset, weatherForecastSamples10_weather, weatherForecastSamples10_trackTemperature, weatherForecastSamples10_trackTemperatureChange, weatherForecastSamples10_airTemperature, weatherForecastSamples10_airTemperatureChange, weatherForecastSamples10_rainPercentage,
+                                weatherForecastSamples11_sessionType, weatherForecastSamples11_timeOffset, weatherForecastSamples11_weather, weatherForecastSamples11_trackTemperature, weatherForecastSamples11_trackTemperatureChange, weatherForecastSamples11_airTemperature, weatherForecastSamples11_airTemperatureChange, weatherForecastSamples11_rainPercentage,
+                                weatherForecastSamples12_sessionType, weatherForecastSamples12_timeOffset, weatherForecastSamples12_weather, weatherForecastSamples12_trackTemperature, weatherForecastSamples12_trackTemperatureChange, weatherForecastSamples12_airTemperature, weatherForecastSamples12_airTemperatureChange, weatherForecastSamples12_rainPercentage,
+                                weatherForecastSamples13_sessionType, weatherForecastSamples13_timeOffset, weatherForecastSamples13_weather, weatherForecastSamples13_trackTemperature, weatherForecastSamples13_trackTemperatureChange, weatherForecastSamples13_airTemperature, weatherForecastSamples13_airTemperatureChange, weatherForecastSamples13_rainPercentage,
+                                weatherForecastSamples14_sessionType, weatherForecastSamples14_timeOffset, weatherForecastSamples14_weather, weatherForecastSamples14_trackTemperature, weatherForecastSamples14_trackTemperatureChange, weatherForecastSamples14_airTemperature, weatherForecastSamples14_airTemperatureChange, weatherForecastSamples14_rainPercentage,
+                                weatherForecastSamples15_sessionType, weatherForecastSamples15_timeOffset, weatherForecastSamples15_weather, weatherForecastSamples15_trackTemperature, weatherForecastSamples15_trackTemperatureChange, weatherForecastSamples15_airTemperature, weatherForecastSamples15_airTemperatureChange, weatherForecastSamples15_rainPercentage,
+                                weatherForecastSamples16_sessionType, weatherForecastSamples16_timeOffset, weatherForecastSamples16_weather, weatherForecastSamples16_trackTemperature, weatherForecastSamples16_trackTemperatureChange, weatherForecastSamples16_airTemperature, weatherForecastSamples16_airTemperatureChange, weatherForecastSamples16_rainPercentage,
+                                weatherForecastSamples17_sessionType, weatherForecastSamples17_timeOffset, weatherForecastSamples17_weather, weatherForecastSamples17_trackTemperature, weatherForecastSamples17_trackTemperatureChange, weatherForecastSamples17_airTemperature, weatherForecastSamples17_airTemperatureChange, weatherForecastSamples17_rainPercentage,
+                                weatherForecastSamples18_sessionType, weatherForecastSamples18_timeOffset, weatherForecastSamples18_weather, weatherForecastSamples18_trackTemperature, weatherForecastSamples18_trackTemperatureChange, weatherForecastSamples18_airTemperature, weatherForecastSamples18_airTemperatureChange, weatherForecastSamples18_rainPercentage,
+                                weatherForecastSamples19_sessionType, weatherForecastSamples19_timeOffset, weatherForecastSamples19_weather, weatherForecastSamples19_trackTemperature, weatherForecastSamples19_trackTemperatureChange, weatherForecastSamples19_airTemperature, weatherForecastSamples19_airTemperatureChange, weatherForecastSamples19_rainPercentage,
+                                weatherForecastSamples20_sessionType, weatherForecastSamples20_timeOffset, weatherForecastSamples20_weather, weatherForecastSamples20_trackTemperature, weatherForecastSamples20_trackTemperatureChange, weatherForecastSamples20_airTemperature, weatherForecastSamples20_airTemperatureChange, weatherForecastSamples20_rainPercentage,
+                                weatherForecastSamples21_sessionType, weatherForecastSamples21_timeOffset, weatherForecastSamples21_weather, weatherForecastSamples21_trackTemperature, weatherForecastSamples21_trackTemperatureChange, weatherForecastSamples21_airTemperature, weatherForecastSamples21_airTemperatureChange, weatherForecastSamples21_rainPercentage,
+                                weatherForecastSamples22_sessionType, weatherForecastSamples22_timeOffset, weatherForecastSamples22_weather, weatherForecastSamples22_trackTemperature, weatherForecastSamples22_trackTemperatureChange, weatherForecastSamples22_airTemperature, weatherForecastSamples22_airTemperatureChange, weatherForecastSamples22_rainPercentage,
+                                weatherForecastSamples23_sessionType, weatherForecastSamples23_timeOffset, weatherForecastSamples23_weather, weatherForecastSamples23_trackTemperature, weatherForecastSamples23_trackTemperatureChange, weatherForecastSamples23_airTemperature, weatherForecastSamples23_airTemperatureChange, weatherForecastSamples23_rainPercentage,
+                                weatherForecastSamples24_sessionType, weatherForecastSamples24_timeOffset, weatherForecastSamples24_weather, weatherForecastSamples24_trackTemperature, weatherForecastSamples24_trackTemperatureChange, weatherForecastSamples24_airTemperature, weatherForecastSamples24_airTemperatureChange, weatherForecastSamples24_rainPercentage,
+                                weatherForecastSamples25_sessionType, weatherForecastSamples25_timeOffset, weatherForecastSamples25_weather, weatherForecastSamples25_trackTemperature, weatherForecastSamples25_trackTemperatureChange, weatherForecastSamples25_airTemperature, weatherForecastSamples25_airTemperatureChange, weatherForecastSamples25_rainPercentage,
+                                weatherForecastSamples26_sessionType, weatherForecastSamples26_timeOffset, weatherForecastSamples26_weather, weatherForecastSamples26_trackTemperature, weatherForecastSamples26_trackTemperatureChange, weatherForecastSamples26_airTemperature, weatherForecastSamples26_airTemperatureChange, weatherForecastSamples26_rainPercentage,
+                                weatherForecastSamples27_sessionType, weatherForecastSamples27_timeOffset, weatherForecastSamples27_weather, weatherForecastSamples27_trackTemperature, weatherForecastSamples27_trackTemperatureChange, weatherForecastSamples27_airTemperature, weatherForecastSamples27_airTemperatureChange, weatherForecastSamples27_rainPercentage,
+                                weatherForecastSamples28_sessionType, weatherForecastSamples28_timeOffset, weatherForecastSamples28_weather, weatherForecastSamples28_trackTemperature, weatherForecastSamples28_trackTemperatureChange, weatherForecastSamples28_airTemperature, weatherForecastSamples28_airTemperatureChange, weatherForecastSamples28_rainPercentage,
+                                weatherForecastSamples29_sessionType, weatherForecastSamples29_timeOffset, weatherForecastSamples29_weather, weatherForecastSamples29_trackTemperature, weatherForecastSamples29_trackTemperatureChange, weatherForecastSamples29_airTemperature, weatherForecastSamples29_airTemperatureChange, weatherForecastSamples29_rainPercentage,
+                                weatherForecastSamples30_sessionType, weatherForecastSamples30_timeOffset, weatherForecastSamples30_weather, weatherForecastSamples30_trackTemperature, weatherForecastSamples30_trackTemperatureChange, weatherForecastSamples30_airTemperature, weatherForecastSamples30_airTemperatureChange, weatherForecastSamples30_rainPercentage,
+                                weatherForecastSamples31_sessionType, weatherForecastSamples31_timeOffset, weatherForecastSamples31_weather, weatherForecastSamples31_trackTemperature, weatherForecastSamples31_trackTemperatureChange, weatherForecastSamples31_airTemperature, weatherForecastSamples31_airTemperatureChange, weatherForecastSamples31_rainPercentage,
+                                weatherForecastSamples32_sessionType, weatherForecastSamples32_timeOffset, weatherForecastSamples32_weather, weatherForecastSamples32_trackTemperature, weatherForecastSamples32_trackTemperatureChange, weatherForecastSamples32_airTemperature, weatherForecastSamples32_airTemperatureChange, weatherForecastSamples32_rainPercentage,
+                                weatherForecastSamples33_sessionType, weatherForecastSamples33_timeOffset, weatherForecastSamples33_weather, weatherForecastSamples33_trackTemperature, weatherForecastSamples33_trackTemperatureChange, weatherForecastSamples33_airTemperature, weatherForecastSamples33_airTemperatureChange, weatherForecastSamples33_rainPercentage,
+                                weatherForecastSamples34_sessionType, weatherForecastSamples34_timeOffset, weatherForecastSamples34_weather, weatherForecastSamples34_trackTemperature, weatherForecastSamples34_trackTemperatureChange, weatherForecastSamples34_airTemperature, weatherForecastSamples34_airTemperatureChange, weatherForecastSamples34_rainPercentage,
+                                weatherForecastSamples35_sessionType, weatherForecastSamples35_timeOffset, weatherForecastSamples35_weather, weatherForecastSamples35_trackTemperature, weatherForecastSamples35_trackTemperatureChange, weatherForecastSamples35_airTemperature, weatherForecastSamples35_airTemperatureChange, weatherForecastSamples35_rainPercentage,
+                                weatherForecastSamples36_sessionType, weatherForecastSamples36_timeOffset, weatherForecastSamples36_weather, weatherForecastSamples36_trackTemperature, weatherForecastSamples36_trackTemperatureChange, weatherForecastSamples36_airTemperature, weatherForecastSamples36_airTemperatureChange, weatherForecastSamples36_rainPercentage,
+                                weatherForecastSamples37_sessionType, weatherForecastSamples37_timeOffset, weatherForecastSamples37_weather, weatherForecastSamples37_trackTemperature, weatherForecastSamples37_trackTemperatureChange, weatherForecastSamples37_airTemperature, weatherForecastSamples37_airTemperatureChange, weatherForecastSamples37_rainPercentage,
+                                weatherForecastSamples38_sessionType, weatherForecastSamples38_timeOffset, weatherForecastSamples38_weather, weatherForecastSamples38_trackTemperature, weatherForecastSamples38_trackTemperatureChange, weatherForecastSamples38_airTemperature, weatherForecastSamples38_airTemperatureChange, weatherForecastSamples38_rainPercentage,
+                                weatherForecastSamples39_sessionType, weatherForecastSamples39_timeOffset, weatherForecastSamples39_weather, weatherForecastSamples39_trackTemperature, weatherForecastSamples39_trackTemperatureChange, weatherForecastSamples39_airTemperature, weatherForecastSamples39_airTemperatureChange, weatherForecastSamples39_rainPercentage,
+                                weatherForecastSamples40_sessionType, weatherForecastSamples40_timeOffset, weatherForecastSamples40_weather, weatherForecastSamples40_trackTemperature, weatherForecastSamples40_trackTemperatureChange, weatherForecastSamples40_airTemperature, weatherForecastSamples40_airTemperatureChange, weatherForecastSamples40_rainPercentage,
+                                weatherForecastSamples41_sessionType, weatherForecastSamples41_timeOffset, weatherForecastSamples41_weather, weatherForecastSamples41_trackTemperature, weatherForecastSamples41_trackTemperatureChange, weatherForecastSamples41_airTemperature, weatherForecastSamples41_airTemperatureChange, weatherForecastSamples41_rainPercentage,
+                                weatherForecastSamples42_sessionType, weatherForecastSamples42_timeOffset, weatherForecastSamples42_weather, weatherForecastSamples42_trackTemperature, weatherForecastSamples42_trackTemperatureChange, weatherForecastSamples42_airTemperature, weatherForecastSamples42_airTemperatureChange, weatherForecastSamples42_rainPercentage,
+                                weatherForecastSamples43_sessionType, weatherForecastSamples43_timeOffset, weatherForecastSamples43_weather, weatherForecastSamples43_trackTemperature, weatherForecastSamples43_trackTemperatureChange, weatherForecastSamples43_airTemperature, weatherForecastSamples43_airTemperatureChange, weatherForecastSamples43_rainPercentage,
+                                weatherForecastSamples44_sessionType, weatherForecastSamples44_timeOffset, weatherForecastSamples44_weather, weatherForecastSamples44_trackTemperature, weatherForecastSamples44_trackTemperatureChange, weatherForecastSamples44_airTemperature, weatherForecastSamples44_airTemperatureChange, weatherForecastSamples44_rainPercentage,
+                                weatherForecastSamples45_sessionType, weatherForecastSamples45_timeOffset, weatherForecastSamples45_weather, weatherForecastSamples45_trackTemperature, weatherForecastSamples45_trackTemperatureChange, weatherForecastSamples45_airTemperature, weatherForecastSamples45_airTemperatureChange, weatherForecastSamples45_rainPercentage,
+                                weatherForecastSamples46_sessionType, weatherForecastSamples46_timeOffset, weatherForecastSamples46_weather, weatherForecastSamples46_trackTemperature, weatherForecastSamples46_trackTemperatureChange, weatherForecastSamples46_airTemperature, weatherForecastSamples46_airTemperatureChange, weatherForecastSamples46_rainPercentage,
+                                weatherForecastSamples47_sessionType, weatherForecastSamples47_timeOffset, weatherForecastSamples47_weather, weatherForecastSamples47_trackTemperature, weatherForecastSamples47_trackTemperatureChange, weatherForecastSamples47_airTemperature, weatherForecastSamples47_airTemperatureChange, weatherForecastSamples47_rainPercentage,
+                                weatherForecastSamples48_sessionType, weatherForecastSamples48_timeOffset, weatherForecastSamples48_weather, weatherForecastSamples48_trackTemperature, weatherForecastSamples48_trackTemperatureChange, weatherForecastSamples48_airTemperature, weatherForecastSamples48_airTemperatureChange, weatherForecastSamples48_rainPercentage,
+                                weatherForecastSamples49_sessionType, weatherForecastSamples49_timeOffset, weatherForecastSamples49_weather, weatherForecastSamples49_trackTemperature, weatherForecastSamples49_trackTemperatureChange, weatherForecastSamples49_airTemperature, weatherForecastSamples49_airTemperatureChange, weatherForecastSamples49_rainPercentage,
+                                weatherForecastSamples50_sessionType, weatherForecastSamples50_timeOffset, weatherForecastSamples50_weather, weatherForecastSamples50_trackTemperature, weatherForecastSamples50_trackTemperatureChange, weatherForecastSamples50_airTemperature, weatherForecastSamples50_airTemperatureChange, weatherForecastSamples50_rainPercentage,
+                                weatherForecastSamples51_sessionType, weatherForecastSamples51_timeOffset, weatherForecastSamples51_weather, weatherForecastSamples51_trackTemperature, weatherForecastSamples51_trackTemperatureChange, weatherForecastSamples51_airTemperature, weatherForecastSamples51_airTemperatureChange, weatherForecastSamples51_rainPercentage,
+                                weatherForecastSamples52_sessionType, weatherForecastSamples52_timeOffset, weatherForecastSamples52_weather, weatherForecastSamples52_trackTemperature, weatherForecastSamples52_trackTemperatureChange, weatherForecastSamples52_airTemperature, weatherForecastSamples52_airTemperatureChange, weatherForecastSamples52_rainPercentage,
+                                weatherForecastSamples53_sessionType, weatherForecastSamples53_timeOffset, weatherForecastSamples53_weather, weatherForecastSamples53_trackTemperature, weatherForecastSamples53_trackTemperatureChange, weatherForecastSamples53_airTemperature, weatherForecastSamples53_airTemperatureChange, weatherForecastSamples53_rainPercentage,
+                                weatherForecastSamples54_sessionType, weatherForecastSamples54_timeOffset, weatherForecastSamples54_weather, weatherForecastSamples54_trackTemperature, weatherForecastSamples54_trackTemperatureChange, weatherForecastSamples54_airTemperature, weatherForecastSamples54_airTemperatureChange, weatherForecastSamples54_rainPercentage,
+                                weatherForecastSamples55_sessionType, weatherForecastSamples55_timeOffset, weatherForecastSamples55_weather, weatherForecastSamples55_trackTemperature, weatherForecastSamples55_trackTemperatureChange, weatherForecastSamples55_airTemperature, weatherForecastSamples55_airTemperatureChange, weatherForecastSamples55_rainPercentage,
+                                weatherForecastSamples56_sessionType, weatherForecastSamples56_timeOffset, weatherForecastSamples56_weather, weatherForecastSamples56_trackTemperature, weatherForecastSamples56_trackTemperatureChange, weatherForecastSamples56_airTemperature, weatherForecastSamples56_airTemperatureChange, weatherForecastSamples56_rainPercentage,
+                                weatherForecastSamples57_sessionType, weatherForecastSamples57_timeOffset, weatherForecastSamples57_weather, weatherForecastSamples57_trackTemperature, weatherForecastSamples57_trackTemperatureChange, weatherForecastSamples57_airTemperature, weatherForecastSamples57_airTemperatureChange, weatherForecastSamples57_rainPercentage,
+                                weatherForecastSamples58_sessionType, weatherForecastSamples58_timeOffset, weatherForecastSamples58_weather, weatherForecastSamples58_trackTemperature, weatherForecastSamples58_trackTemperatureChange, weatherForecastSamples58_airTemperature, weatherForecastSamples58_airTemperatureChange, weatherForecastSamples58_rainPercentage,
+                                weatherForecastSamples59_sessionType, weatherForecastSamples59_timeOffset, weatherForecastSamples59_weather, weatherForecastSamples59_trackTemperature, weatherForecastSamples59_trackTemperatureChange, weatherForecastSamples59_airTemperature, weatherForecastSamples59_airTemperatureChange, weatherForecastSamples59_rainPercentage,
+                                weatherForecastSamples60_sessionType, weatherForecastSamples60_timeOffset, weatherForecastSamples60_weather, weatherForecastSamples60_trackTemperature, weatherForecastSamples60_trackTemperatureChange, weatherForecastSamples60_airTemperature, weatherForecastSamples60_airTemperatureChange, weatherForecastSamples60_rainPercentage,
+                                weatherForecastSamples61_sessionType, weatherForecastSamples61_timeOffset, weatherForecastSamples61_weather, weatherForecastSamples61_trackTemperature, weatherForecastSamples61_trackTemperatureChange, weatherForecastSamples61_airTemperature, weatherForecastSamples61_airTemperatureChange, weatherForecastSamples61_rainPercentage,
+                                weatherForecastSamples62_sessionType, weatherForecastSamples62_timeOffset, weatherForecastSamples62_weather, weatherForecastSamples62_trackTemperature, weatherForecastSamples62_trackTemperatureChange, weatherForecastSamples62_airTemperature, weatherForecastSamples62_airTemperatureChange, weatherForecastSamples62_rainPercentage,
+                                weatherForecastSamples63_sessionType, weatherForecastSamples63_timeOffset, weatherForecastSamples63_weather, weatherForecastSamples63_trackTemperature, weatherForecastSamples63_trackTemperatureChange, weatherForecastSamples63_airTemperature, weatherForecastSamples63_airTemperatureChange, weatherForecastSamples63_rainPercentage,
+                                forecastAccuracy, aiDifficulty, seasonLinkIdentifier, weekendLinkIdentifier, sessionLinkIdentifier, pitStopWindowIdealLap, pitStopWindowLatestLap, pitStopRejoinPosition, steeringAssist, brakingAssist, gearboxAssist, pitAssist,
+                                pitReleaseAssist, ersAssist, drsAssist, dynamicRacingLine, dynamicRacingLineType, gameMode, ruleSet, timeOfDay, sessionLength, speedUnitsLeadPlayer, temperatureUnitsLeadPlayer, speedUnitsSecondaryPlayer, temperatureUnitsSecondaryPlayer,
+                                numSafetyCarPeriods, numVirtualSafetyCarPeriods, numRedFlagPeriods, equalCarPerformance, recoveryMode, flashbackLimit, surfaceType, lowFuelMode, raceStarts, tyreTemperature, pitLaneTyreSim, carDamage, carDamageRate, collisions,
+                                collisionsOffForFirstLapOnly, mpUnsafePitRelease, mpOffForGriefing, cornerCuttingStringency, parcFermeRules, pitStopExperience, safetyCar, safetyCarExperience, formationLap, formationLapExperience, redFlags, affectsLicenceLevelSolo,
+                                affectsLicenceLevelMP, numSessionsInWeekend,
+                                weekendStructure0,
+                                weekendStructure1,
+                                weekendStructure2,
+                                weekendStructure3,
+                                weekendStructure4,
+                                weekendStructure5,
+                                weekendStructure6,
+                                weekendStructure7,
+                                weekendStructure8,
+                                weekendStructure9,
+                                weekendStructure10,
+                                weekendStructure11,
+                                sector2LapDistanceStart,
+                                sector3LapDistanceStart
+                            ) VALUES (
+                                @weather, @trackTemperature, @airTemperature, @totalLaps, @trackLength, @sessionType, @trackId, @formula, @sessionTimeLeft, @sessionDuration, @pitSpeedLimit, @gamePaused, @isSpectating, @spectatorCarIndex, @sliProNativeSupport,
+                                @numMarshalZones,
+                                @marshalZones0_zoneStart, @marshalZones0_zoneFlag,
+                                @marshalZones1_zoneStart, @marshalZones1_zoneFlag,
+                                @marshalZones2_zoneStart, @marshalZones2_zoneFlag,
+                                @marshalZones3_zoneStart, @marshalZones3_zoneFlag,
+                                @marshalZones4_zoneStart, @marshalZones4_zoneFlag,
+                                @marshalZones5_zoneStart, @marshalZones5_zoneFlag,
+                                @marshalZones6_zoneStart, @marshalZones6_zoneFlag,
+                                @marshalZones7_zoneStart, @marshalZones7_zoneFlag,
+                                @marshalZones8_zoneStart, @marshalZones8_zoneFlag,
+                                @marshalZones9_zoneStart, @marshalZones9_zoneFlag,
+                                @marshalZones10_zoneStart, @marshalZones10_zoneFlag,
+                                @marshalZones11_zoneStart, @marshalZones11_zoneFlag,
+                                @marshalZones12_zoneStart, @marshalZones12_zoneFlag,
+                                @marshalZones13_zoneStart, @marshalZones13_zoneFlag,
+                                @marshalZones14_zoneStart, @marshalZones14_zoneFlag,
+                                @marshalZones15_zoneStart, @marshalZones15_zoneFlag,
+                                @marshalZones16_zoneStart, @marshalZones16_zoneFlag,
+                                @marshalZones17_zoneStart, @marshalZones17_zoneFlag,
+                                @marshalZones18_zoneStart, @marshalZones18_zoneFlag,
+                                @marshalZones19_zoneStart, @marshalZones19_zoneFlag,
+                                @marshalZones20_zoneStart, @marshalZones20_zoneFlag,
+                                @safetyCarStatus, @networkGame, @numWeatherForecastSamples,
+                                @weatherForecastSamples0_sessionType, @weatherForecastSamples0_timeOffset, @weatherForecastSamples0_weather, @weatherForecastSamples0_trackTemperature, @weatherForecastSamples0_trackTemperatureChange, @weatherForecastSamples0_airTemperature, @weatherForecastSamples0_airTemperatureChange, @weatherForecastSamples0_rainPercentage,
+                                @weatherForecastSamples1_sessionType, @weatherForecastSamples1_timeOffset, @weatherForecastSamples1_weather, @weatherForecastSamples1_trackTemperature, @weatherForecastSamples1_trackTemperatureChange, @weatherForecastSamples1_airTemperature, @weatherForecastSamples1_airTemperatureChange, @weatherForecastSamples1_rainPercentage,
+                                @weatherForecastSamples2_sessionType, @weatherForecastSamples2_timeOffset, @weatherForecastSamples2_weather, @weatherForecastSamples2_trackTemperature, @weatherForecastSamples2_trackTemperatureChange, @weatherForecastSamples2_airTemperature, @weatherForecastSamples2_airTemperatureChange, @weatherForecastSamples2_rainPercentage,
+                                @weatherForecastSamples3_sessionType, @weatherForecastSamples3_timeOffset, @weatherForecastSamples3_weather, @weatherForecastSamples3_trackTemperature, @weatherForecastSamples3_trackTemperatureChange, @weatherForecastSamples3_airTemperature, @weatherForecastSamples3_airTemperatureChange, @weatherForecastSamples3_rainPercentage,
+                                @weatherForecastSamples4_sessionType, @weatherForecastSamples4_timeOffset, @weatherForecastSamples4_weather, @weatherForecastSamples4_trackTemperature, @weatherForecastSamples4_trackTemperatureChange, @weatherForecastSamples4_airTemperature, @weatherForecastSamples4_airTemperatureChange, @weatherForecastSamples4_rainPercentage,
+                                @weatherForecastSamples5_sessionType, @weatherForecastSamples5_timeOffset, @weatherForecastSamples5_weather, @weatherForecastSamples5_trackTemperature, @weatherForecastSamples5_trackTemperatureChange, @weatherForecastSamples5_airTemperature, @weatherForecastSamples5_airTemperatureChange, @weatherForecastSamples5_rainPercentage,
+                                @weatherForecastSamples6_sessionType, @weatherForecastSamples6_timeOffset, @weatherForecastSamples6_weather, @weatherForecastSamples6_trackTemperature, @weatherForecastSamples6_trackTemperatureChange, @weatherForecastSamples6_airTemperature, @weatherForecastSamples6_airTemperatureChange, @weatherForecastSamples6_rainPercentage,
+                                @weatherForecastSamples7_sessionType, @weatherForecastSamples7_timeOffset, @weatherForecastSamples7_weather, @weatherForecastSamples7_trackTemperature, @weatherForecastSamples7_trackTemperatureChange, @weatherForecastSamples7_airTemperature, @weatherForecastSamples7_airTemperatureChange, @weatherForecastSamples7_rainPercentage,
+                                @weatherForecastSamples8_sessionType, @weatherForecastSamples8_timeOffset, @weatherForecastSamples8_weather, @weatherForecastSamples8_trackTemperature, @weatherForecastSamples8_trackTemperatureChange, @weatherForecastSamples8_airTemperature, @weatherForecastSamples8_airTemperatureChange, @weatherForecastSamples8_rainPercentage,
+                                @weatherForecastSamples9_sessionType, @weatherForecastSamples9_timeOffset, @weatherForecastSamples9_weather, @weatherForecastSamples9_trackTemperature, @weatherForecastSamples9_trackTemperatureChange, @weatherForecastSamples9_airTemperature, @weatherForecastSamples9_airTemperatureChange, @weatherForecastSamples9_rainPercentage,
+                                @weatherForecastSamples10_sessionType, @weatherForecastSamples10_timeOffset, @weatherForecastSamples10_weather, @weatherForecastSamples10_trackTemperature, @weatherForecastSamples10_trackTemperatureChange, @weatherForecastSamples10_airTemperature, @weatherForecastSamples10_airTemperatureChange, @weatherForecastSamples10_rainPercentage,
+                                @weatherForecastSamples11_sessionType, @weatherForecastSamples11_timeOffset, @weatherForecastSamples11_weather, @weatherForecastSamples11_trackTemperature, @weatherForecastSamples11_trackTemperatureChange, @weatherForecastSamples11_airTemperature, @weatherForecastSamples11_airTemperatureChange, @weatherForecastSamples11_rainPercentage,
+                                @weatherForecastSamples12_sessionType, @weatherForecastSamples12_timeOffset, @weatherForecastSamples12_weather, @weatherForecastSamples12_trackTemperature, @weatherForecastSamples12_trackTemperatureChange, @weatherForecastSamples12_airTemperature, @weatherForecastSamples12_airTemperatureChange, @weatherForecastSamples12_rainPercentage,
+                                @weatherForecastSamples13_sessionType, @weatherForecastSamples13_timeOffset, @weatherForecastSamples13_weather, @weatherForecastSamples13_trackTemperature, @weatherForecastSamples13_trackTemperatureChange, @weatherForecastSamples13_airTemperature, @weatherForecastSamples13_airTemperatureChange, @weatherForecastSamples13_rainPercentage,
+                                @weatherForecastSamples14_sessionType, @weatherForecastSamples14_timeOffset, @weatherForecastSamples14_weather, @weatherForecastSamples14_trackTemperature, @weatherForecastSamples14_trackTemperatureChange, @weatherForecastSamples14_airTemperature, @weatherForecastSamples14_airTemperatureChange, @weatherForecastSamples14_rainPercentage,
+                                @weatherForecastSamples15_sessionType, @weatherForecastSamples15_timeOffset, @weatherForecastSamples15_weather, @weatherForecastSamples15_trackTemperature, @weatherForecastSamples15_trackTemperatureChange, @weatherForecastSamples15_airTemperature, @weatherForecastSamples15_airTemperatureChange, @weatherForecastSamples15_rainPercentage,
+                                @weatherForecastSamples16_sessionType, @weatherForecastSamples16_timeOffset, @weatherForecastSamples16_weather, @weatherForecastSamples16_trackTemperature, @weatherForecastSamples16_trackTemperatureChange, @weatherForecastSamples16_airTemperature, @weatherForecastSamples16_airTemperatureChange, @weatherForecastSamples16_rainPercentage,
+                                @weatherForecastSamples17_sessionType, @weatherForecastSamples17_timeOffset, @weatherForecastSamples17_weather, @weatherForecastSamples17_trackTemperature, @weatherForecastSamples17_trackTemperatureChange, @weatherForecastSamples17_airTemperature, @weatherForecastSamples17_airTemperatureChange, @weatherForecastSamples17_rainPercentage,
+                                @weatherForecastSamples18_sessionType, @weatherForecastSamples18_timeOffset, @weatherForecastSamples18_weather, @weatherForecastSamples18_trackTemperature, @weatherForecastSamples18_trackTemperatureChange, @weatherForecastSamples18_airTemperature, @weatherForecastSamples18_airTemperatureChange, @weatherForecastSamples18_rainPercentage,
+                                @weatherForecastSamples19_sessionType, @weatherForecastSamples19_timeOffset, @weatherForecastSamples19_weather, @weatherForecastSamples19_trackTemperature, @weatherForecastSamples19_trackTemperatureChange, @weatherForecastSamples19_airTemperature, @weatherForecastSamples19_airTemperatureChange, @weatherForecastSamples19_rainPercentage,
+                                @weatherForecastSamples20_sessionType, @weatherForecastSamples20_timeOffset, @weatherForecastSamples20_weather, @weatherForecastSamples20_trackTemperature, @weatherForecastSamples20_trackTemperatureChange, @weatherForecastSamples20_airTemperature, @weatherForecastSamples20_airTemperatureChange, @weatherForecastSamples20_rainPercentage,
+                                @weatherForecastSamples21_sessionType, @weatherForecastSamples21_timeOffset, @weatherForecastSamples21_weather, @weatherForecastSamples21_trackTemperature, @weatherForecastSamples21_trackTemperatureChange, @weatherForecastSamples21_airTemperature, @weatherForecastSamples21_airTemperatureChange, @weatherForecastSamples21_rainPercentage,
+                                @weatherForecastSamples22_sessionType, @weatherForecastSamples22_timeOffset, @weatherForecastSamples22_weather, @weatherForecastSamples22_trackTemperature, @weatherForecastSamples22_trackTemperatureChange, @weatherForecastSamples22_airTemperature, @weatherForecastSamples22_airTemperatureChange, @weatherForecastSamples22_rainPercentage,
+                                @weatherForecastSamples23_sessionType, @weatherForecastSamples23_timeOffset, @weatherForecastSamples23_weather, @weatherForecastSamples23_trackTemperature, @weatherForecastSamples23_trackTemperatureChange, @weatherForecastSamples23_airTemperature, @weatherForecastSamples23_airTemperatureChange, @weatherForecastSamples23_rainPercentage,
+                                @weatherForecastSamples24_sessionType, @weatherForecastSamples24_timeOffset, @weatherForecastSamples24_weather, @weatherForecastSamples24_trackTemperature, @weatherForecastSamples24_trackTemperatureChange, @weatherForecastSamples24_airTemperature, @weatherForecastSamples24_airTemperatureChange, @weatherForecastSamples24_rainPercentage,
+                                @weatherForecastSamples25_sessionType, @weatherForecastSamples25_timeOffset, @weatherForecastSamples25_weather, @weatherForecastSamples25_trackTemperature, @weatherForecastSamples25_trackTemperatureChange, @weatherForecastSamples25_airTemperature, @weatherForecastSamples25_airTemperatureChange, @weatherForecastSamples25_rainPercentage,
+                                @weatherForecastSamples26_sessionType, @weatherForecastSamples26_timeOffset, @weatherForecastSamples26_weather, @weatherForecastSamples26_trackTemperature, @weatherForecastSamples26_trackTemperatureChange, @weatherForecastSamples26_airTemperature, @weatherForecastSamples26_airTemperatureChange, @weatherForecastSamples26_rainPercentage,
+                                @weatherForecastSamples27_sessionType, @weatherForecastSamples27_timeOffset, @weatherForecastSamples27_weather, @weatherForecastSamples27_trackTemperature, @weatherForecastSamples27_trackTemperatureChange, @weatherForecastSamples27_airTemperature, @weatherForecastSamples27_airTemperatureChange, @weatherForecastSamples27_rainPercentage,
+                                @weatherForecastSamples28_sessionType, @weatherForecastSamples28_timeOffset, @weatherForecastSamples28_weather, @weatherForecastSamples28_trackTemperature, @weatherForecastSamples28_trackTemperatureChange, @weatherForecastSamples28_airTemperature, @weatherForecastSamples28_airTemperatureChange, @weatherForecastSamples28_rainPercentage,
+                                @weatherForecastSamples29_sessionType, @weatherForecastSamples29_timeOffset, @weatherForecastSamples29_weather, @weatherForecastSamples29_trackTemperature, @weatherForecastSamples29_trackTemperatureChange, @weatherForecastSamples29_airTemperature, @weatherForecastSamples29_airTemperatureChange, @weatherForecastSamples29_rainPercentage,
+                                @weatherForecastSamples30_sessionType, @weatherForecastSamples30_timeOffset, @weatherForecastSamples30_weather, @weatherForecastSamples30_trackTemperature, @weatherForecastSamples30_trackTemperatureChange, @weatherForecastSamples30_airTemperature, @weatherForecastSamples30_airTemperatureChange, @weatherForecastSamples30_rainPercentage,
+                                @weatherForecastSamples31_sessionType, @weatherForecastSamples31_timeOffset, @weatherForecastSamples31_weather, @weatherForecastSamples31_trackTemperature, @weatherForecastSamples31_trackTemperatureChange, @weatherForecastSamples31_airTemperature, @weatherForecastSamples31_airTemperatureChange, @weatherForecastSamples31_rainPercentage,
+                                @weatherForecastSamples32_sessionType, @weatherForecastSamples32_timeOffset, @weatherForecastSamples32_weather, @weatherForecastSamples32_trackTemperature, @weatherForecastSamples32_trackTemperatureChange, @weatherForecastSamples32_airTemperature, @weatherForecastSamples32_airTemperatureChange, @weatherForecastSamples32_rainPercentage,
+                                @weatherForecastSamples33_sessionType, @weatherForecastSamples33_timeOffset, @weatherForecastSamples33_weather, @weatherForecastSamples33_trackTemperature, @weatherForecastSamples33_trackTemperatureChange, @weatherForecastSamples33_airTemperature, @weatherForecastSamples33_airTemperatureChange, @weatherForecastSamples33_rainPercentage,
+                                @weatherForecastSamples34_sessionType, @weatherForecastSamples34_timeOffset, @weatherForecastSamples34_weather, @weatherForecastSamples34_trackTemperature, @weatherForecastSamples34_trackTemperatureChange, @weatherForecastSamples34_airTemperature, @weatherForecastSamples34_airTemperatureChange, @weatherForecastSamples34_rainPercentage,
+                                @weatherForecastSamples35_sessionType, @weatherForecastSamples35_timeOffset, @weatherForecastSamples35_weather, @weatherForecastSamples35_trackTemperature, @weatherForecastSamples35_trackTemperatureChange, @weatherForecastSamples35_airTemperature, @weatherForecastSamples35_airTemperatureChange, @weatherForecastSamples35_rainPercentage,
+                                @weatherForecastSamples36_sessionType, @weatherForecastSamples36_timeOffset, @weatherForecastSamples36_weather, @weatherForecastSamples36_trackTemperature, @weatherForecastSamples36_trackTemperatureChange, @weatherForecastSamples36_airTemperature, @weatherForecastSamples36_airTemperatureChange, @weatherForecastSamples36_rainPercentage,
+                                @weatherForecastSamples37_sessionType, @weatherForecastSamples37_timeOffset, @weatherForecastSamples37_weather, @weatherForecastSamples37_trackTemperature, @weatherForecastSamples37_trackTemperatureChange, @weatherForecastSamples37_airTemperature, @weatherForecastSamples37_airTemperatureChange, @weatherForecastSamples37_rainPercentage,
+                                @weatherForecastSamples38_sessionType, @weatherForecastSamples38_timeOffset, @weatherForecastSamples38_weather, @weatherForecastSamples38_trackTemperature, @weatherForecastSamples38_trackTemperatureChange, @weatherForecastSamples38_airTemperature, @weatherForecastSamples38_airTemperatureChange, @weatherForecastSamples38_rainPercentage,
+                                @weatherForecastSamples39_sessionType, @weatherForecastSamples39_timeOffset, @weatherForecastSamples39_weather, @weatherForecastSamples39_trackTemperature, @weatherForecastSamples39_trackTemperatureChange, @weatherForecastSamples39_airTemperature, @weatherForecastSamples39_airTemperatureChange, @weatherForecastSamples39_rainPercentage,
+                                @weatherForecastSamples40_sessionType, @weatherForecastSamples40_timeOffset, @weatherForecastSamples40_weather, @weatherForecastSamples40_trackTemperature, @weatherForecastSamples40_trackTemperatureChange, @weatherForecastSamples40_airTemperature, @weatherForecastSamples40_airTemperatureChange, @weatherForecastSamples40_rainPercentage,
+                                @weatherForecastSamples41_sessionType, @weatherForecastSamples41_timeOffset, @weatherForecastSamples41_weather, @weatherForecastSamples41_trackTemperature, @weatherForecastSamples41_trackTemperatureChange, @weatherForecastSamples41_airTemperature, @weatherForecastSamples41_airTemperatureChange, @weatherForecastSamples41_rainPercentage,
+                                @weatherForecastSamples42_sessionType, @weatherForecastSamples42_timeOffset, @weatherForecastSamples42_weather, @weatherForecastSamples42_trackTemperature, @weatherForecastSamples42_trackTemperatureChange, @weatherForecastSamples42_airTemperature, @weatherForecastSamples42_airTemperatureChange, @weatherForecastSamples42_rainPercentage,
+                                @weatherForecastSamples43_sessionType, @weatherForecastSamples43_timeOffset, @weatherForecastSamples43_weather, @weatherForecastSamples43_trackTemperature, @weatherForecastSamples43_trackTemperatureChange, @weatherForecastSamples43_airTemperature, @weatherForecastSamples43_airTemperatureChange, @weatherForecastSamples43_rainPercentage,
+                                @weatherForecastSamples44_sessionType, @weatherForecastSamples44_timeOffset, @weatherForecastSamples44_weather, @weatherForecastSamples44_trackTemperature, @weatherForecastSamples44_trackTemperatureChange, @weatherForecastSamples44_airTemperature, @weatherForecastSamples44_airTemperatureChange, @weatherForecastSamples44_rainPercentage,
+                                @weatherForecastSamples45_sessionType, @weatherForecastSamples45_timeOffset, @weatherForecastSamples45_weather, @weatherForecastSamples45_trackTemperature, @weatherForecastSamples45_trackTemperatureChange, @weatherForecastSamples45_airTemperature, @weatherForecastSamples45_airTemperatureChange, @weatherForecastSamples45_rainPercentage,
+                                @weatherForecastSamples46_sessionType, @weatherForecastSamples46_timeOffset, @weatherForecastSamples46_weather, @weatherForecastSamples46_trackTemperature, @weatherForecastSamples46_trackTemperatureChange, @weatherForecastSamples46_airTemperature, @weatherForecastSamples46_airTemperatureChange, @weatherForecastSamples46_rainPercentage,
+                                @weatherForecastSamples47_sessionType, @weatherForecastSamples47_timeOffset, @weatherForecastSamples47_weather, @weatherForecastSamples47_trackTemperature, @weatherForecastSamples47_trackTemperatureChange, @weatherForecastSamples47_airTemperature, @weatherForecastSamples47_airTemperatureChange, @weatherForecastSamples47_rainPercentage,
+                                @weatherForecastSamples48_sessionType, @weatherForecastSamples48_timeOffset, @weatherForecastSamples48_weather, @weatherForecastSamples48_trackTemperature, @weatherForecastSamples48_trackTemperatureChange, @weatherForecastSamples48_airTemperature, @weatherForecastSamples48_airTemperatureChange, @weatherForecastSamples48_rainPercentage,
+                                @weatherForecastSamples49_sessionType, @weatherForecastSamples49_timeOffset, @weatherForecastSamples49_weather, @weatherForecastSamples49_trackTemperature, @weatherForecastSamples49_trackTemperatureChange, @weatherForecastSamples49_airTemperature, @weatherForecastSamples49_airTemperatureChange, @weatherForecastSamples49_rainPercentage,
+                                @weatherForecastSamples50_sessionType, @weatherForecastSamples50_timeOffset, @weatherForecastSamples50_weather, @weatherForecastSamples50_trackTemperature, @weatherForecastSamples50_trackTemperatureChange, @weatherForecastSamples50_airTemperature, @weatherForecastSamples50_airTemperatureChange, @weatherForecastSamples50_rainPercentage,
+                                @weatherForecastSamples51_sessionType, @weatherForecastSamples51_timeOffset, @weatherForecastSamples51_weather, @weatherForecastSamples51_trackTemperature, @weatherForecastSamples51_trackTemperatureChange, @weatherForecastSamples51_airTemperature, @weatherForecastSamples51_airTemperatureChange, @weatherForecastSamples51_rainPercentage,
+                                @weatherForecastSamples52_sessionType, @weatherForecastSamples52_timeOffset, @weatherForecastSamples52_weather, @weatherForecastSamples52_trackTemperature, @weatherForecastSamples52_trackTemperatureChange, @weatherForecastSamples52_airTemperature, @weatherForecastSamples52_airTemperatureChange, @weatherForecastSamples52_rainPercentage,
+                                @weatherForecastSamples53_sessionType, @weatherForecastSamples53_timeOffset, @weatherForecastSamples53_weather, @weatherForecastSamples53_trackTemperature, @weatherForecastSamples53_trackTemperatureChange, @weatherForecastSamples53_airTemperature, @weatherForecastSamples53_airTemperatureChange, @weatherForecastSamples53_rainPercentage,
+                                @weatherForecastSamples54_sessionType, @weatherForecastSamples54_timeOffset, @weatherForecastSamples54_weather, @weatherForecastSamples54_trackTemperature, @weatherForecastSamples54_trackTemperatureChange, @weatherForecastSamples54_airTemperature, @weatherForecastSamples54_airTemperatureChange, @weatherForecastSamples54_rainPercentage,
+                                @weatherForecastSamples55_sessionType, @weatherForecastSamples55_timeOffset, @weatherForecastSamples55_weather, @weatherForecastSamples55_trackTemperature, @weatherForecastSamples55_trackTemperatureChange, @weatherForecastSamples55_airTemperature, @weatherForecastSamples55_airTemperatureChange, @weatherForecastSamples55_rainPercentage,
+                                @weatherForecastSamples56_sessionType, @weatherForecastSamples56_timeOffset, @weatherForecastSamples56_weather, @weatherForecastSamples56_trackTemperature, @weatherForecastSamples56_trackTemperatureChange, @weatherForecastSamples56_airTemperature, @weatherForecastSamples56_airTemperatureChange, @weatherForecastSamples56_rainPercentage,
+                                @weatherForecastSamples57_sessionType, @weatherForecastSamples57_timeOffset, @weatherForecastSamples57_weather, @weatherForecastSamples57_trackTemperature, @weatherForecastSamples57_trackTemperatureChange, @weatherForecastSamples57_airTemperature, @weatherForecastSamples57_airTemperatureChange, @weatherForecastSamples57_rainPercentage,
+                                @weatherForecastSamples58_sessionType, @weatherForecastSamples58_timeOffset, @weatherForecastSamples58_weather, @weatherForecastSamples58_trackTemperature, @weatherForecastSamples58_trackTemperatureChange, @weatherForecastSamples58_airTemperature, @weatherForecastSamples58_airTemperatureChange, @weatherForecastSamples58_rainPercentage,
+                                @weatherForecastSamples59_sessionType, @weatherForecastSamples59_timeOffset, @weatherForecastSamples59_weather, @weatherForecastSamples59_trackTemperature, @weatherForecastSamples59_trackTemperatureChange, @weatherForecastSamples59_airTemperature, @weatherForecastSamples59_airTemperatureChange, @weatherForecastSamples59_rainPercentage,
+                                @weatherForecastSamples60_sessionType, @weatherForecastSamples60_timeOffset, @weatherForecastSamples60_weather, @weatherForecastSamples60_trackTemperature, @weatherForecastSamples60_trackTemperatureChange, @weatherForecastSamples60_airTemperature, @weatherForecastSamples60_airTemperatureChange, @weatherForecastSamples60_rainPercentage,
+                                @weatherForecastSamples61_sessionType, @weatherForecastSamples61_timeOffset, @weatherForecastSamples61_weather, @weatherForecastSamples61_trackTemperature, @weatherForecastSamples61_trackTemperatureChange, @weatherForecastSamples61_airTemperature, @weatherForecastSamples61_airTemperatureChange, @weatherForecastSamples61_rainPercentage,
+                                @weatherForecastSamples62_sessionType, @weatherForecastSamples62_timeOffset, @weatherForecastSamples62_weather, @weatherForecastSamples62_trackTemperature, @weatherForecastSamples62_trackTemperatureChange, @weatherForecastSamples62_airTemperature, @weatherForecastSamples62_airTemperatureChange, @weatherForecastSamples62_rainPercentage,
+                                @weatherForecastSamples63_sessionType, @weatherForecastSamples63_timeOffset, @weatherForecastSamples63_weather, @weatherForecastSamples63_trackTemperature, @weatherForecastSamples63_trackTemperatureChange, @weatherForecastSamples63_airTemperature, @weatherForecastSamples63_airTemperatureChange, @weatherForecastSamples63_rainPercentage,
+                                @forecastAccuracy,
+                                @aiDifficulty, @seasonLinkIdentifier, @weekendLinkIdentifier, @sessionLinkIdentifier, @pitStopWindowIdealLap, @pitStopWindowLatestLap, @pitStopRejoinPosition, @steeringAssist, @brakingAssist, @gearboxAssist, @pitAssist, @pitReleaseAssist,
+                                @ersAssist, @drsAssist, @dynamicRacingLine, @dynamicRacingLineType, @gameMode, @ruleSet, @timeOfDay, @sessionLength, @speedUnitsLeadPlayer, @temperatureUnitsLeadPlayer, @speedUnitsSecondaryPlayer, @temperatureUnitsSecondaryPlayer,
+                                @numSafetyCarPeriods, @numVirtualSafetyCarPeriods, @numRedFlagPeriods, @equalCarPerformance, @recoveryMode, @flashbackLimit, @surfaceType, @lowFuelMode, @raceStarts, @tyreTemperature, @pitLaneTyreSim, @carDamage, @carDamageRate,
+                                @collisions, @collisionsOffForFirstLapOnly, @mpUnsafePitRelease, @mpOffForGriefing, @cornerCuttingStringency, @parcFermeRules, @pitStopExperience, @safetyCar, @safetyCarExperience, @formationLap, @formationLapExperience, @redFlags,
+                                @affectsLicenceLevelSolo, @affectsLicenceLevelMP, @numSessionsInWeekend,
+                                @weekendStructure0,
+                                @weekendStructure1,
+                                @weekendStructure2,
+                                @weekendStructure3,
+                                @weekendStructure4,
+                                @weekendStructure5,
+                                @weekendStructure6,
+                                @weekendStructure7,
+                                @weekendStructure8,
+                                @weekendStructure9,
+                                @weekendStructure10,
+                                @weekendStructure11,
+                                @sector2LapDistanceStart,
+                                @sector3LapDistanceStart
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@weather", dataSession.weather);
+                            cmd.Parameters.AddWithValue("@trackTemperature", dataSession.trackTemperature);
+                            cmd.Parameters.AddWithValue("@airTemperature", dataSession.airTemperature);
+                            cmd.Parameters.AddWithValue("@totalLaps", dataSession.totalLaps);
+                            cmd.Parameters.AddWithValue("@trackLength", dataSession.trackLength);
+                            cmd.Parameters.AddWithValue("@sessionType", dataSession.sessionType);
+                            cmd.Parameters.AddWithValue("@trackId", dataSession.trackId);
+                            cmd.Parameters.AddWithValue("@formula", dataSession.formula);
+                            cmd.Parameters.AddWithValue("@sessionTimeLeft", dataSession.sessionTimeLeft);
+                            cmd.Parameters.AddWithValue("@sessionDuration", dataSession.sessionDuration);
+                            cmd.Parameters.AddWithValue("@pitSpeedLimit", dataSession.pitSpeedLimit);
+                            cmd.Parameters.AddWithValue("@gamePaused", dataSession.gamePaused);
+                            cmd.Parameters.AddWithValue("@isSpectating", dataSession.isSpectating);
+                            cmd.Parameters.AddWithValue("@spectatorCarIndex", dataSession.spectatorCarIndex);
+                            cmd.Parameters.AddWithValue("@sliProNativeSupport", dataSession.sliProNativeSupport);
+                            cmd.Parameters.AddWithValue("@numMarshalZones", dataSession.numMarshalZones);
+                            for (var i = 0; i < 21; i++)
+                            {
+                                cmd.Parameters.AddWithValue($"@marshalZones{i}_zoneStart",dataSession.marshalZones[i].zoneStart);
+                                cmd.Parameters.AddWithValue($"@marshalZones{i}_zoneFlag",dataSession.marshalZones[i].zoneFlag);
+                            }
+                            cmd.Parameters.AddWithValue("@safetyCarStatus", dataSession.safetyCarStatus);
+                            cmd.Parameters.AddWithValue("@networkGame", dataSession.networkGame);
+                            cmd.Parameters.AddWithValue("@numWeatherForecastSamples",dataSession.numWeatherForecastSamples);
+                            for (var i = 0; i < 64; i++)
+                            {
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_sessionType",dataSession.weatherForecastSamples[i].sessionType);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_timeOffset",dataSession.weatherForecastSamples[i].timeOffset);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_weather",dataSession.weatherForecastSamples[i].weather);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_trackTemperature",dataSession.weatherForecastSamples[i].trackTemperature);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_trackTemperatureChange",dataSession.weatherForecastSamples[i].trackTemperatureChange);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_airTemperature",dataSession.weatherForecastSamples[i].airTemperature);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_airTemperatureChange",dataSession.weatherForecastSamples[i].airTemperatureChange);
+                                cmd.Parameters.AddWithValue($"@weatherForecastSamples{i}_rainPercentage",dataSession.weatherForecastSamples[i].rainPercentage);
+                            }
+                            cmd.Parameters.AddWithValue("@forecastAccuracy", dataSession.forecastAccuracy);
+                            cmd.Parameters.AddWithValue("@aiDifficulty", dataSession.aiDifficulty);
+                            cmd.Parameters.AddWithValue("@seasonLinkIdentifier", dataSession.seasonLinkIdentifier);
+                            cmd.Parameters.AddWithValue("@weekendLinkIdentifier", dataSession.weekendLinkIdentifier);
+                            cmd.Parameters.AddWithValue("@sessionLinkIdentifier", dataSession.sessionLinkIdentifier);
+                            cmd.Parameters.AddWithValue("@pitStopWindowIdealLap", dataSession.pitStopWindowIdealLap);
+                            cmd.Parameters.AddWithValue("@pitStopWindowLatestLap", dataSession.pitStopWindowLatestLap);
+                            cmd.Parameters.AddWithValue("@pitStopRejoinPosition", dataSession.pitStopRejoinPosition);
+                            cmd.Parameters.AddWithValue("@steeringAssist", dataSession.steeringAssist);
+                            cmd.Parameters.AddWithValue("@brakingAssist", dataSession.brakingAssist);
+                            cmd.Parameters.AddWithValue("@gearboxAssist", dataSession.gearboxAssist);
+                            cmd.Parameters.AddWithValue("@pitAssist", dataSession.pitAssist);
+                            cmd.Parameters.AddWithValue("@pitReleaseAssist", dataSession.pitReleaseAssist);
+                            cmd.Parameters.AddWithValue("@ERSAssist", dataSession.ERSAssist);
+                            cmd.Parameters.AddWithValue("@DRSAssist", dataSession.DRSAssist);
+                            cmd.Parameters.AddWithValue("@dynamicRacingLine", dataSession.dynamicRacingLine);
+                            cmd.Parameters.AddWithValue("@dynamicRacingLineType", dataSession.dynamicRacingLineType);
+                            cmd.Parameters.AddWithValue("@gameMode", dataSession.gameMode);
+                            cmd.Parameters.AddWithValue("@ruleSet", dataSession.ruleSet);
+                            cmd.Parameters.AddWithValue("@timeOfDay", dataSession.timeOfDay);
+                            cmd.Parameters.AddWithValue("@sessionLength", dataSession.sessionLength);
+                            cmd.Parameters.AddWithValue("@speedUnitsLeadPlayer", dataSession.speedUnitsLeadPlayer);
+                            cmd.Parameters.AddWithValue("@temperatureUnitsLeadPlayer",dataSession.temperatureUnitsLeadPlayer);
+                            cmd.Parameters.AddWithValue("@speedUnitsSecondaryPlayer",dataSession.speedUnitsSecondaryPlayer);
+                            cmd.Parameters.AddWithValue("@temperatureUnitsSecondaryPlayer",dataSession.temperatureUnitsSecondaryPlayer);
+                            cmd.Parameters.AddWithValue("@numSafetyCarPeriods", dataSession.numSafetyCarPeriods);
+                            cmd.Parameters.AddWithValue("@numVirtualSafetyCarPeriods",dataSession.numVirtualSafetyCarPeriods);
+                            cmd.Parameters.AddWithValue("@numRedFlagPeriods", dataSession.numRedFlagPeriods);
+                            cmd.Parameters.AddWithValue("@equalCarPerformance", dataSession.equalCarPerformance);
+                            cmd.Parameters.AddWithValue("@recoveryMode", dataSession.recoveryMode);
+                            cmd.Parameters.AddWithValue("@flashbackLimit", dataSession.flashbackLimit);
+                            cmd.Parameters.AddWithValue("@surfaceType", dataSession.surfaceType);
+                            cmd.Parameters.AddWithValue("@lowFuelMode", dataSession.lowFuelMode);
+                            cmd.Parameters.AddWithValue("@raceStarts", dataSession.raceStarts);
+                            cmd.Parameters.AddWithValue("@tyreTemperature", dataSession.tyreTemperature);
+                            cmd.Parameters.AddWithValue("@pitLaneTyreSim", dataSession.pitLaneTyreSim);
+                            cmd.Parameters.AddWithValue("@carDamage", dataSession.carDamage);
+                            cmd.Parameters.AddWithValue("@carDamageRate", dataSession.carDamageRate);
+                            cmd.Parameters.AddWithValue("@collisions", dataSession.collisions);
+                            cmd.Parameters.AddWithValue("@collisionsOffForFirstLapOnly",dataSession.collisionsOffForFirstLapOnly);
+                            cmd.Parameters.AddWithValue("@mpUnsafePitRelease", dataSession.mpUnsafePitRelease);
+                            cmd.Parameters.AddWithValue("@mpOffForGriefing", dataSession.mpOffForGriefing);
+                            cmd.Parameters.AddWithValue("@cornerCuttingStringency", dataSession.cornerCuttingStringency);
+                            cmd.Parameters.AddWithValue("@parcFermeRules", dataSession.parcFermeRules);
+                            cmd.Parameters.AddWithValue("@pitStopExperience", dataSession.pitStopExperience);
+                            cmd.Parameters.AddWithValue("@safetyCar", dataSession.safetyCar);
+                            cmd.Parameters.AddWithValue("@safetyCarExperience", dataSession.safetyCarExperience);
+                            cmd.Parameters.AddWithValue("@formationLap", dataSession.formationLap);
+                            cmd.Parameters.AddWithValue("@formationLapExperience", dataSession.formationLapExperience);
+                            cmd.Parameters.AddWithValue("@redFlags", dataSession.redFlags);
+                            cmd.Parameters.AddWithValue("@affectsLicenceLevelSolo", dataSession.affectsLicenceLevelSolo);
+                            cmd.Parameters.AddWithValue("@affectsLicenceLevelMP", dataSession.affectsLicenceLevelMP);
+                            cmd.Parameters.AddWithValue("@numSessionsInWeekend", dataSession.numSessionsInWeekend);
+                            for (var i = 0; i < 12; i++) cmd.Parameters.AddWithValue($"@weekendStructure{i}", dataSession.weekendStructure[i]);
+                            cmd.Parameters.AddWithValue("@sector2LapDistanceStart", dataSession.sector2LapDistanceStart);
+                            cmd.Parameters.AddWithValue("@sector3LapDistanceStart", dataSession.sector3LapDistanceStart);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"SESSION INSERT error : {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1285:
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Lap of 1285B
+                        var headerLap = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var lap = new Lap[22];
+                        for (var i = 0; i < 22; i++) lap[i] = ReadLap(br);
+                        var timeTrialPBCarIdx = br.ReadByte();
+                        var timeTrialRivalCarIdx = br.ReadByte();
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataLap = lap[headerLap.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO LAP (
+                                lastLapTimeInMS, currentLapTimeInMS,
+                                sector1TimeMSPart, sector1TimeMinutesPart,
+                                sector2TimeMSPart, sector2TimeMinutesPart,
+                                deltaToCarInFrontMSPart, deltaToCarInFrontMinutesPart,
+                                deltaToRaceLeaderMSPart, deltaToRaceLeaderMinutesPart,
+                                lapDistance, totalDistance,
+                                safetyCarDelta,
+                                carPosition,
+                                currentLapNum,
+                                pitStatus, numPitStops,
+                                sector, currentLapInvalid,
+                                penalties, totalWarnings,
+                                cornerCuttingWarnings,
+                                numUnservedDriveThroughPens, numUnservedStopGoPens,
+                                gridPosition,
+                                driverStatus, resultStatus,
+                                pitLaneTimerActive, pitLaneTimeInLaneInMS,
+                                pitStopTimerInMS, pitStopShouldServePen,
+                                speedTrapFastestSpeed, speedTrapFastestLap,
+                                timeTrialPBCarIdx, timeTrialRivalCarIdx
+                            ) VALUES (
+                                @lastLapTimeInMS, @currentLapTimeInMS,
+                                @sector1TimeMSPart, @sector1TimeMinutesPart,
+                                @sector2TimeMSPart, @sector2TimeMinutesPart,
+                                @deltaToCarInFrontMSPart, @deltaToCarInFrontMinutesPart,
+                                @deltaToRaceLeaderMSPart, @deltaToRaceLeaderMinutesPart,
+                                @lapDistance, @totalDistance,
+                                @safetyCarDelta,
+                                @carPosition,
+                                @currentLapNum,
+                                @pitStatus, @numPitStops,
+                                @sector, @currentLapInvalid,
+                                @penalties, @totalWarnings,
+                                @cornerCuttingWarnings,
+                                @numUnservedDriveThroughPens, @numUnservedStopGoPens,
+                                @gridPosition,
+                                @driverStatus, @resultStatus,
+                                @pitLaneTimerActive, @pitLaneTimeInLaneInMS,
+                                @pitStopTimerInMS, @pitStopShouldServePen,
+                                @speedTrapFastestSpeed, @speedTrapFastestLap,
+                                @timeTrialPBCarIdx, @timeTrialRivalCarIdx
+                            );", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@lastLapTimeInMS", dataLap.lastLapTimeInMS);
+                            cmd.Parameters.AddWithValue("@currentLapTimeInMS", dataLap.currentLapTimeInMS);
+                            cmd.Parameters.AddWithValue("@sector1TimeMSPart", dataLap.sector1TimeMSPart);
+                            cmd.Parameters.AddWithValue("@sector1TimeMinutesPart", dataLap.sector1TimeMinutesPart);
+                            cmd.Parameters.AddWithValue("@sector2TimeMSPart", dataLap.sector2TimeMSPart);
+                            cmd.Parameters.AddWithValue("@sector2TimeMinutesPart", dataLap.sector2TimeMinutesPart);
+                            cmd.Parameters.AddWithValue("@deltaToCarInFrontMSPart", dataLap.deltaToCarInFrontMSPart);
+                            cmd.Parameters.AddWithValue("@deltaToCarInFrontMinutesPart", dataLap.deltaToCarInFrontMinutesPart);
+                            cmd.Parameters.AddWithValue("@deltaToRaceLeaderMSPart", dataLap.deltaToRaceLeaderMSPart);
+                            cmd.Parameters.AddWithValue("@deltaToRaceLeaderMinutesPart", dataLap.deltaToRaceLeaderMinutesPart);
+                            cmd.Parameters.AddWithValue("@lapDistance", dataLap.lapDistance);
+                            cmd.Parameters.AddWithValue("@totalDistance", dataLap.totalDistance);
+                            cmd.Parameters.AddWithValue("@safetyCarDelta", dataLap.safetyCarDelta);
+                            cmd.Parameters.AddWithValue("@carPosition", dataLap.carPosition);
+                            cmd.Parameters.AddWithValue("@currentLapNum", dataLap.currentLapNum);
+                            cmd.Parameters.AddWithValue("@pitStatus", dataLap.pitStatus);
+                            cmd.Parameters.AddWithValue("@numPitStops", dataLap.numPitStops);
+                            cmd.Parameters.AddWithValue("@sector", dataLap.sector);
+                            cmd.Parameters.AddWithValue("@currentLapInvalid", dataLap.currentLapInvalid);
+                            cmd.Parameters.AddWithValue("@penalties", dataLap.penalties);
+                            cmd.Parameters.AddWithValue("@totalWarnings", dataLap.totalWarnings);
+                            cmd.Parameters.AddWithValue("@cornerCuttingWarnings", dataLap.cornerCuttingWarnings);
+                            cmd.Parameters.AddWithValue("@numUnservedDriveThroughPens", dataLap.numUnservedDriveThroughPens);
+                            cmd.Parameters.AddWithValue("@numUnservedStopGoPens", dataLap.numUnservedStopGoPens);
+                            cmd.Parameters.AddWithValue("@gridPosition", dataLap.gridPosition);
+                            cmd.Parameters.AddWithValue("@driverStatus", dataLap.driverStatus);
+                            cmd.Parameters.AddWithValue("@resultStatus", dataLap.resultStatus);
+                            cmd.Parameters.AddWithValue("@pitLaneTimerActive", dataLap.pitLaneTimerActive);
+                            cmd.Parameters.AddWithValue("@pitLaneTimeInLaneInMS", dataLap.pitLaneTimeInLaneInMS);
+                            cmd.Parameters.AddWithValue("@pitStopTimerInMS", dataLap.pitStopTimerInMS);
+                            cmd.Parameters.AddWithValue("@pitStopShouldServePen", dataLap.pitStopShouldServePen);
+                            cmd.Parameters.AddWithValue("@speedTrapFastestSpeed", dataLap.speedTrapFastestSpeed);
+                            cmd.Parameters.AddWithValue("@speedTrapFastestLap", dataLap.speedTrapFastestLap);
+                            cmd.Parameters.AddWithValue("@timeTrialPBCarIdx", timeTrialPBCarIdx);
+                            cmd.Parameters.AddWithValue("@timeTrialRivalCarIdx", timeTrialRivalCarIdx);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"LAP INSERT error : {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 45:
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Event of 45B
+                        var dataEvent = ReadEvent(br);
+                        /*
+                            Session Started         (SSTA)      Sent when the session starts
+                            Session Ended	        (SEND)	    Sent when the session ends
+                            Fastest Lap	            (FTLP)  	When a driver achieves the fastest lap
+                            Retirement	            (�RTMT) 	When a driver retires
+                            DRS enabled	            (DRSE)  	Race control have enabled DRS
+                            DRS disabled	        (DRSD�)     Race control have disabled DRS
+                            Team mate in pits	    (TMPT)  	Your team mate has entered the pits
+                            Chequered flag	        (CHQF)  	The chequered flag has been waved
+                            Race Winner	            (RCWN)  	The race winner is announced
+                            Penalty Issued	        (PENA)  	A penalty has been issued � details in event
+                            Speed Trap Triggered	(SPTP)  	Speed trap has been triggered by fastest speed
+                            Start lights	        (STLG)  	Start lights � number shown
+                            Lights out	            (LGOT)  	Lights out
+                            Drive through served	(DTSV)  	Drive through penalty served
+                            Stop go served	        (SGSV)  	Stop go penalty served
+                            Flashback	            (FLBK)  	Flashback activated
+                            Button status	        (BUTN)  	Button status changed
+                            Red Flag	            (RDFL)  	Red flag shown
+                            Overtake	            (OVTK)  	Overtake occurred
+                            Safety Car	            (SCAR)  	Safety car event - details in event
+                            Collision	            (COLL)  	Collision between two vehicles has occurred
+                        */
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var eventCode = System.Text.Encoding.ASCII.GetString(dataEvent.eventStringCode);
+                        
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO EVENT (
+                                eventStringCode,
+                                fastestLap_vehicleIdx, fastestLap_lapTime,
+                                retirement_vehicleIdx,
+                                teamMateInPits_vehicleIdx,
+                                raceWinner_vehicleIdx,
+                                penalty_penaltyType, penalty_infringementType, penalty_vehicleIdx, penalty_otherVehicleIdx, penalty_time, penalty_lapNum, penalty_placesGained,
+                                speedTrap_vehicleIdx, speedTrap_speed, speedTrap_isOverallFastest, speedTrap_isDriverFastest, speedTrap_fastestVehicleIdx, speedTrap_fastestSpeed,
+                                startLights_numLights,
+                                driveThroughPenaltyServed_vehicleIdx,
+                                stopGoPenaltyServed_vehicleIdx,
+                                flashback_flashbackFrameIdentifier, flashback_flashbackSessionTime,
+                                buttons_buttonStatus,
+                                overtake_overtakingVehicleIdx, overtake_beingOvertakenVehicleIdx,
+                                safetyCar_safetyCarType, safetyCar_EventType,
+                                collision_vehicle1Idx, collision_vehicle2Idx
+                            ) VALUES (
+                                @eventStringCode, @fastestLap_vehicleIdx,
+                                @fastestLap_lapTime,
+                                @retirement_vehicleIdx,
+                                @teamMateInPits_vehicleIdx,
+                                @raceWinner_vehicleIdx,
+                                @penalty_penaltyType, @penalty_infringementType, @penalty_vehicleIdx, @penalty_otherVehicleIdx, @penalty_time, @penalty_lapNum, @penalty_placesGained,
+                                @speedTrap_vehicleIdx, @speedTrap_speed, @speedTrap_isOverallFastest, @speedTrap_isDriverFastest, @speedTrap_fastestVehicleIdx, @speedTrap_fastestSpeed,
+                                @startLights_numLights,
+                                @driveThroughPenaltyServed_vehicleIdx,
+                                @stopGoPenaltyServed_vehicleIdx,
+                                @flashback_flashbackFrameIdentifier, @flashback_flashbackSessionTime,
+                                @buttons_buttonStatus,
+                                @overtake_overtakingVehicleIdx, @overtake_beingOvertakenVehicleIdx,
+                                @safetyCar_safetyCarType, @safetyCar_EventType,
+                                @collision_vehicle1Idx, @collision_vehicle2Idx
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@eventStringCode", dataEvent.eventStringCode);
+                            switch (eventCode)
+                            {
+                                case "FTLP":
+                                    cmd.Parameters.AddWithValue("@fastestLap_vehicleIdx",dataEvent.eventDetails.FastestLap.vehicleIdx);
+                                    cmd.Parameters.AddWithValue("@fastestLap_lapTime", dataEvent.eventDetails.FastestLap.lapTime);
+                                    break;
+                                case "RTMT":
+                                    cmd.Parameters.AddWithValue("@retirement_vehicleIdx",dataEvent.eventDetails.Retirement.vehicleIdx);
+                                    break;
+                                case "TMPT":
+                                    cmd.Parameters.AddWithValue("@teamMateInPits_vehicleIdx",dataEvent.eventDetails.TeamMateInPits.vehicleIdx);
+                                    break;
+                                case "RCWN":
+                                    cmd.Parameters.AddWithValue("@raceWinner_vehicleIdx",dataEvent.eventDetails.RaceWinner.vehicleIdx);
+                                    break;
+                                case "PENA":
+                                    cmd.Parameters.AddWithValue("@penalty_penaltyType", dataEvent.eventDetails.Penalty.penaltyType);
+                                    cmd.Parameters.AddWithValue("@penalty_infringementType",dataEvent.eventDetails.Penalty.infringementType);
+                                    cmd.Parameters.AddWithValue("@penalty_vehicleIdx", dataEvent.eventDetails.Penalty.vehicleIdx);
+                                    cmd.Parameters.AddWithValue("@penalty_otherVehicleIdx",dataEvent.eventDetails.Penalty.otherVehicleIdx);
+                                    cmd.Parameters.AddWithValue("@penalty_time", dataEvent.eventDetails.Penalty.time);
+                                    cmd.Parameters.AddWithValue("@penalty_lapNum", dataEvent.eventDetails.Penalty.lapNum);
+                                    cmd.Parameters.AddWithValue("@penalty_placesGained",dataEvent.eventDetails.Penalty.placesGained);
+                                    break;
+                                case "SPTP":
+                                    cmd.Parameters.AddWithValue("@speedTrap_vehicleIdx", dataEvent.eventDetails.SpeedTrap.vehicleIdx);
+                                    cmd.Parameters.AddWithValue("@speedTrap_speed", dataEvent.eventDetails.SpeedTrap.speed);
+                                    cmd.Parameters.AddWithValue("@speedTrap_isOverallFastest", dataEvent.eventDetails.SpeedTrap.isOverallFastestInSession);
+                                    cmd.Parameters.AddWithValue("@speedTrap_isDriverFastest", dataEvent.eventDetails.SpeedTrap.isDriverFastestInSession);
+                                    cmd.Parameters.AddWithValue("@speedTrap_fastestVehicleIdx", dataEvent.eventDetails.SpeedTrap.fastestVehicleIdxInSession);
+                                    cmd.Parameters.AddWithValue("@speedTrap_fastestSpeed", dataEvent.eventDetails.SpeedTrap.fastestSpeedInSession);
+                                    break;
+                                case "STLG":
+                                    cmd.Parameters.AddWithValue("@startLights_numLights", dataEvent.eventDetails.StartLights.numLights);
+                                    break;
+                                case "DTSV":
+                                    cmd.Parameters.AddWithValue("@driveThroughPenaltyServed_vehicleIdx", dataEvent.eventDetails.DriveThroughPenaltyServed.vehicleIdx);
+                                    break;
+                                case "SGSV":
+                                    cmd.Parameters.AddWithValue("@stopGoPenaltyServed_vehicleIdx", dataEvent.eventDetails.StopGoPenaltyServed.vehicleIdx);
+                                    break;
+                                case "FLBK":
+                                    cmd.Parameters.AddWithValue("@flashback_flashbackFrameIdentifier", dataEvent.eventDetails.Flashback.flashbackFrameIdentifier);
+                                    cmd.Parameters.AddWithValue("@flashback_flashbackSessionTime", dataEvent.eventDetails.Flashback.flashbackSessionTime);
+                                    break;
+                                case "BUTN":
+                                    cmd.Parameters.AddWithValue("@buttons_buttonStatus", dataEvent.eventDetails.Buttons.buttonStatus);
+                                    break;
+                                case "OVTK":
+                                    cmd.Parameters.AddWithValue("@overtake_overtakingVehicleIdx", dataEvent.eventDetails.Overtake.overtakingVehicleIdx);
+                                    cmd.Parameters.AddWithValue("@overtake_beingOvertakenVehicleIdx", dataEvent.eventDetails.Overtake.beingOvertakenVehicleIdx);
+                                    break;
+                                case "SCAR":
+                                    cmd.Parameters.AddWithValue("@safetyCar_safetyCarType", dataEvent.eventDetails.SafetyCar.safetyCarType);
+                                    cmd.Parameters.AddWithValue("@safetyCar_EventType", dataEvent.eventDetails.SafetyCar.eventType);
+                                    break;
+                                case "COLL":
+                                    cmd.Parameters.AddWithValue("@collision_vehicle1Idx", dataEvent.eventDetails.Collision.vehicle1Idx);
+                                    cmd.Parameters.AddWithValue("@collision_vehicle2Idx", dataEvent.eventDetails.Collision.vehicle2Idx);
+                                    break;
+                            }
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"EVENT {eventCode} INSERT error : {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1350:
+                        //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of Participants of 1350B
+                        var headerParticipants = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var numActiveCars = br.ReadByte();
+                        var participants = new Participants[22];
+                        for (var i = 0; i < 22; i++) participants[i] = ReadParticipants(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataParticipants = participants[headerParticipants.playerCarIndex];
+                        var decodedParticipantsName = System.Text.Encoding.UTF8.GetString(dataParticipants.name).TrimEnd('\0'); //trim nulls
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO PARTICIPANTS (
+                                numActiveCars,
+                                aiControlled,
+                                driverId,
+                                networkId,
+                                teamId,
+                                myTeam,
+                                raceNumber,
+                                nationality,
+                                name,
+                                yourTelemetry,
+                                showOnlineNames,
+                                techLevel,
+                                platform
+                            ) VALUES (
+                                @numActiveCars,
+                                @aiControlled,
+                                @driverId,
+                                @networkId,
+                                @teamId,
+                                @myTeam,
+                                @raceNumber,
+                                @nationality,
+                                @name,
+                                @yourTelemetry,
+                                @showOnlineNames,
+                                @techLevel,
+                                @platform
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@numActiveCars", numActiveCars);
+                            cmd.Parameters.AddWithValue("@aiControlled", dataParticipants.aiControlled);
+                            cmd.Parameters.AddWithValue("@driverId", dataParticipants.driverId);
+                            cmd.Parameters.AddWithValue("@networkId", dataParticipants.networkId);
+                            cmd.Parameters.AddWithValue("@teamId", dataParticipants.teamId);
+                            cmd.Parameters.AddWithValue("@myTeam", dataParticipants.myTeam);
+                            cmd.Parameters.AddWithValue("@raceNumber", dataParticipants.raceNumber);
+                            cmd.Parameters.AddWithValue("@nationality", dataParticipants.nationality);
+                            cmd.Parameters.AddWithValue("@name", decodedParticipantsName);
+                            cmd.Parameters.AddWithValue("@yourTelemetry", dataParticipants.yourTelemetry);
+                            cmd.Parameters.AddWithValue("@showOnlineNames", dataParticipants.showOnlineNames);
+                            cmd.Parameters.AddWithValue("@techLevel", dataParticipants.techLevel);
+                            cmd.Parameters.AddWithValue("@platform", dataParticipants.platform);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"PARTICIPANTS INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1133:
+                        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarSetup of 1133B
+                        var headerCarSetup = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carSetup = new CarSetup[22];
+                        for (var i = 0; i < 22; i++) carSetup[i] = ReadCarSetup(br);
+                        var nextFrontWingValue = br.ReadSingle();
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataCarSetup = carSetup[headerCarSetup.playerCarIndex];
+                        
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO CARSETUP (
+                                frontWing, rearWing,
+                                onThrottle, offThrottle,
+                                frontCamber, rearCamber,
+                                frontToe, rearToe,
+                                frontSuspension, rearSuspension,
+                                frontAntiRollBar, rearAntiRollBar,
+                                frontSuspensionHeight, rearSuspensionHeight,
+                                brakePressure, brakeBias,
+                                engineBraking,
+                                rearLeftTyrePressure, rearRightTyrePressure,
+                                frontLeftTyrePressure, frontRightTyrePressure,
+                                ballast,
+                                fuelLoad,
+                                nextFrontWingValue
+                            ) VALUES (
+                                @frontWing, @rearWing,
+                                @onThrottle, @offThrottle,
+                                @frontCamber, @rearCamber,
+                                @frontToe, @rearToe,
+                                @frontSuspension, @rearSuspension,
+                                @frontAntiRollBar, @rearAntiRollBar,
+                                @frontSuspensionHeight, @rearSuspensionHeight,
+                                @brakePressure, @brakeBias,
+                                @engineBraking,
+                                @rearLeftTyrePressure, @rearRightTyrePressure,
+                                @frontLeftTyrePressure, @frontRightTyrePressure,
+                                @ballast,
+                                @fuelLoad,
+                                @nextFrontWingValue
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@frontWing", dataCarSetup.frontWing);
+                            cmd.Parameters.AddWithValue("@rearWing", dataCarSetup.rearWing);
+                            cmd.Parameters.AddWithValue("@onThrottle", dataCarSetup.onThrottle);
+                            cmd.Parameters.AddWithValue("@offThrottle", dataCarSetup.offThrottle);
+                            cmd.Parameters.AddWithValue("@frontCamber", dataCarSetup.frontCamber);
+                            cmd.Parameters.AddWithValue("@rearCamber", dataCarSetup.rearCamber);
+                            cmd.Parameters.AddWithValue("@frontToe", dataCarSetup.frontToe);
+                            cmd.Parameters.AddWithValue("@rearToe", dataCarSetup.rearToe);
+                            cmd.Parameters.AddWithValue("@frontSuspension", dataCarSetup.frontSuspension);
+                            cmd.Parameters.AddWithValue("@rearSuspension", dataCarSetup.rearSuspension);
+                            cmd.Parameters.AddWithValue("@frontAntiRollBar", dataCarSetup.frontAntiRollBar);
+                            cmd.Parameters.AddWithValue("@rearAntiRollBar", dataCarSetup.rearAntiRollBar);
+                            cmd.Parameters.AddWithValue("@frontSuspensionHeight", dataCarSetup.frontSuspensionHeight);
+                            cmd.Parameters.AddWithValue("@rearSuspensionHeight", dataCarSetup.rearSuspensionHeight);
+                            cmd.Parameters.AddWithValue("@brakePressure", dataCarSetup.brakePressure);
+                            cmd.Parameters.AddWithValue("@brakeBias", dataCarSetup.brakeBias);
+                            cmd.Parameters.AddWithValue("@engineBraking", dataCarSetup.engineBraking);
+                            cmd.Parameters.AddWithValue("@rearLeftTyrePressure", dataCarSetup.rearLeftTyrePressure);
+                            cmd.Parameters.AddWithValue("@rearRightTyrePressure", dataCarSetup.rearRightTyrePressure);
+                            cmd.Parameters.AddWithValue("@frontLeftTyrePressure", dataCarSetup.frontLeftTyrePressure);
+                            cmd.Parameters.AddWithValue("@frontRightTyrePressure", dataCarSetup.frontRightTyrePressure);
+                            cmd.Parameters.AddWithValue("@ballast", dataCarSetup.ballast);
+                            cmd.Parameters.AddWithValue("@fuelLoad", dataCarSetup.fuelLoad);
+                            cmd.Parameters.AddWithValue("@nextFrontWingValue", nextFrontWingValue);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"CARSETUP INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1352:
+                        //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarTelemetry of 1352B
+                        var headerCarTelemetry = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carTelemetry = new CarTelemetry[22];
+                        for (var i = 0; i < 22; i++) carTelemetry[i] = ReadCarTelemetry(br);
+                        br.ReadByte(); //mfdPanelIndex
+                        br.ReadByte(); //mfdPanelIndexSecondaryPlayer
+                        br.ReadSByte(); //suggestedGear
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataCarTelemetry = carTelemetry[headerCarTelemetry.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO CARTELEMETRY (
+                                speed, throttle, steer, brake, clutch, gear, engineRPM, drs,
+                                revLightsPercent, revLightsBitValue,
+                                brakesTemperature0, brakesTemperature1, brakesTemperature2, brakesTemperature3,
+                                tyresSurfaceTemperature0, tyresSurfaceTemperature1, tyresSurfaceTemperature2, tyresSurfaceTemperature3,
+                                tyresInnerTemperature0, tyresInnerTemperature1, tyresInnerTemperature2, tyresInnerTemperature3,
+                                engineTemperature,
+                                tyresPressure0, tyresPressure1, tyresPressure2, tyresPressure3,
+                                surfaceType0, surfaceType1, surfaceType2, surfaceType3
+                            ) VALUES (
+                                @speed, @throttle, @steer, @brake, @clutch, @gear, @engineRPM, @drs,
+                                @revLightsPercent, @revLightsBitValue,
+                                @brakesTemperature0, @brakesTemperature1, @brakesTemperature2, @brakesTemperature3,
+                                @tyresSurfaceTemperature0, @tyresSurfaceTemperature1, @tyresSurfaceTemperature2, @tyresSurfaceTemperature3,
+                                @tyresInnerTemperature0, @tyresInnerTemperature1, @tyresInnerTemperature2, @tyresInnerTemperature3,
+                                @engineTemperature,
+                                @tyresPressure0, @tyresPressure1, @tyresPressure2, @tyresPressure3,
+                                @surfaceType0, @surfaceType1, @surfaceType2, @surfaceType3
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@speed", dataCarTelemetry.speed);
+                            cmd.Parameters.AddWithValue("@throttle", dataCarTelemetry.throttle);
+                            cmd.Parameters.AddWithValue("@steer", dataCarTelemetry.steer);
+                            cmd.Parameters.AddWithValue("@brake", dataCarTelemetry.brake);
+                            cmd.Parameters.AddWithValue("@clutch", dataCarTelemetry.clutch);
+                            cmd.Parameters.AddWithValue("@gear", dataCarTelemetry.gear);
+                            cmd.Parameters.AddWithValue("@engineRPM", dataCarTelemetry.engineRPM);
+                            cmd.Parameters.AddWithValue("@drs", dataCarTelemetry.drs);
+                            cmd.Parameters.AddWithValue("@revLightsPercent", dataCarTelemetry.revLightsPercent);
+                            cmd.Parameters.AddWithValue("@revLightsBitValue", dataCarTelemetry.revLightsBitValue);
+                            cmd.Parameters.AddWithValue("@brakesTemperature0",dataCarTelemetry.brakesTemperature[0]);
+                            cmd.Parameters.AddWithValue("@brakesTemperature1",dataCarTelemetry.brakesTemperature[1]);
+                            cmd.Parameters.AddWithValue("@brakesTemperature2",dataCarTelemetry.brakesTemperature[2]);
+                            cmd.Parameters.AddWithValue("@brakesTemperature3",dataCarTelemetry.brakesTemperature[3]);
+                            cmd.Parameters.AddWithValue("@tyresSurfaceTemperature0",dataCarTelemetry.tyresSurfaceTemperature[0]);
+                            cmd.Parameters.AddWithValue("@tyresSurfaceTemperature1",dataCarTelemetry.tyresSurfaceTemperature[1]);
+                            cmd.Parameters.AddWithValue("@tyresSurfaceTemperature2",dataCarTelemetry.tyresSurfaceTemperature[2]);
+                            cmd.Parameters.AddWithValue("@tyresSurfaceTemperature3",dataCarTelemetry.tyresSurfaceTemperature[3]);
+                            cmd.Parameters.AddWithValue("@tyresInnerTemperature0",dataCarTelemetry.tyresInnerTemperature[0]);
+                            cmd.Parameters.AddWithValue("@tyresInnerTemperature1",dataCarTelemetry.tyresInnerTemperature[1]);
+                            cmd.Parameters.AddWithValue("@tyresInnerTemperature2",dataCarTelemetry.tyresInnerTemperature[2]);
+                            cmd.Parameters.AddWithValue("@tyresInnerTemperature3",dataCarTelemetry.tyresInnerTemperature[3]);
+                            cmd.Parameters.AddWithValue("@engineTemperature", dataCarTelemetry.engineTemperature);
+                            cmd.Parameters.AddWithValue("@tyresPressure0", dataCarTelemetry.tyresPressure[0]);
+                            cmd.Parameters.AddWithValue("@tyresPressure1", dataCarTelemetry.tyresPressure[1]);
+                            cmd.Parameters.AddWithValue("@tyresPressure2", dataCarTelemetry.tyresPressure[2]);
+                            cmd.Parameters.AddWithValue("@tyresPressure3", dataCarTelemetry.tyresPressure[3]);
+                            cmd.Parameters.AddWithValue("@surfaceType0", dataCarTelemetry.surfaceType[0]);
+                            cmd.Parameters.AddWithValue("@surfaceType1", dataCarTelemetry.surfaceType[1]);
+                            cmd.Parameters.AddWithValue("@surfaceType2", dataCarTelemetry.surfaceType[2]);
+                            cmd.Parameters.AddWithValue("@surfaceType3", dataCarTelemetry.surfaceType[3]);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"CARTELEMETRY INSERT error : {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1239:
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarStatus of 1239B
+                        var headerCarStatus = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carStatus = new CarStatus[22];
+                        for (var i = 0; i < 22; i++) carStatus[i] = ReadCarStatus(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataCarStatus = carStatus[headerCarStatus.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO CARSTATUS (
+                                tractionControl,antiLockBrakes,
+                                fuelMix,
+                                frontBrakeBias,
+                                pitLimiterStatus,
+                                fuelInTank,fuelCapacity,fuelRemainingLaps,
+                                maxRPM,idleRPM,maxGears,
+                                drsAllowed,drsActivationDistance,
+                                actualTyreCompound,visualTyreCompound,
+                                tyresAgeLaps,
+                                vehicleFiaFlags,
+                                enginePowerICE,enginePowerMGUK,
+                                ersStoreEnergy, ersDeployMode,
+                                ersHarvestedThisLapMGUK, ersHarvestedThisLapMGUH,ersDeployedThisLap,
+                                networkPaused
+                            ) VALUES (
+                                @tractionControl,@antiLockBrakes,
+                                @fuelMix,
+                                @frontBrakeBias,
+                                @pitLimiterStatus,
+                                @fuelInTank,@fuelCapacity,@fuelRemainingLaps,
+                                @maxRPM,@idleRPM,@maxGears,
+                                @drsAllowed,@drsActivationDistance,
+                                @actualTyreCompound,@visualTyreCompound,
+                                @tyresAgeLaps,
+                                @vehicleFiaFlags,
+                                @enginePowerICE,@enginePowerMGUK,
+                                @ersStoreEnergy, @ersDeployMode,
+                                @ersHarvestedThisLapMGUK,@ersHarvestedThisLapMGUH, @ersDeployedThisLap,
+                                @networkPaused
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@tractionControl", dataCarStatus.tractionControl);
+                            cmd.Parameters.AddWithValue("@antiLockBrakes", dataCarStatus.antiLockBrakes);
+                            cmd.Parameters.AddWithValue("@fuelMix", dataCarStatus.fuelMix);
+                            cmd.Parameters.AddWithValue("@frontBrakeBias", dataCarStatus.frontBrakeBias);
+                            cmd.Parameters.AddWithValue("@pitLimiterStatus", dataCarStatus.pitLimiterStatus);
+                            cmd.Parameters.AddWithValue("@fuelInTank", dataCarStatus.fuelInTank);
+                            cmd.Parameters.AddWithValue("@fuelCapacity", dataCarStatus.fuelCapacity);
+                            cmd.Parameters.AddWithValue("@fuelRemainingLaps", dataCarStatus.fuelRemainingLaps);
+                            cmd.Parameters.AddWithValue("@maxRPM", dataCarStatus.maxRPM);
+                            cmd.Parameters.AddWithValue("@idleRPM", dataCarStatus.idleRPM);
+                            cmd.Parameters.AddWithValue("@maxGears", dataCarStatus.maxGears);
+                            cmd.Parameters.AddWithValue("@drsAllowed", dataCarStatus.drsAllowed);
+                            cmd.Parameters.AddWithValue("@drsActivationDistance", dataCarStatus.drsActivationDistance);
+                            cmd.Parameters.AddWithValue("@actualTyreCompound", dataCarStatus.actualTyreCompound);
+                            cmd.Parameters.AddWithValue("@visualTyreCompound", dataCarStatus.visualTyreCompound);
+                            cmd.Parameters.AddWithValue("@tyresAgeLaps", dataCarStatus.tyresAgeLaps);
+                            cmd.Parameters.AddWithValue("@vehicleFiaFlags", dataCarStatus.vehicleFiaFlags);
+                            cmd.Parameters.AddWithValue("@enginePowerICE", dataCarStatus.enginePowerICE);
+                            cmd.Parameters.AddWithValue("@enginePowerMGUK", dataCarStatus.enginePowerMGUK);
+                            cmd.Parameters.AddWithValue("@ersStoreEnergy", dataCarStatus.ersStoreEnergy);
+                            cmd.Parameters.AddWithValue("@ersDeployMode", dataCarStatus.ersDeployMode);
+                            cmd.Parameters.AddWithValue("@ersHarvestedThisLapMGUK", dataCarStatus.ersHarvestedThisLapMGUK);
+                            cmd.Parameters.AddWithValue("@ersHarvestedThisLapMGUH", dataCarStatus.ersHarvestedThisLapMGUH);
+                            cmd.Parameters.AddWithValue("@ersDeployedThisLap", dataCarStatus.ersDeployedThisLap);
+                            cmd.Parameters.AddWithValue("@networkPaused", dataCarStatus.networkPaused);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"CARSTATUS INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1020:
+                        //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of FinalClassification of 1020B
+                        var headerFinalClassification = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var numCars = br.ReadByte();
+                        var finalClassification = new FinalClassification[22];
+                        for (var i = 0; i < 22; i++) finalClassification[i] = ReadFinalClassification(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataFinalClassification = finalClassification[headerFinalClassification.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO FINALCLASSIFICATION (
+                                numCars,
+                                position,
+                                numLaps,
+                                gridPosition,
+                                points,
+                                numPitStops,
+                                resultStatus,
+                                bestLapTimeInMS,
+                                totalRaceTime,
+                                penaltiesTime,
+                                numPenalties,
+                                numTyreStints,
+                                tyreStintsActual0,
+                                tyreStintsActual1,
+                                tyreStintsActual2,
+                                tyreStintsActual3,
+                                tyreStintsActual4,
+                                tyreStintsActual5,
+                                tyreStintsActual6,
+                                tyreStintsActual7,
+                                tyreStintsVisual0,
+                                tyreStintsVisual1,
+                                tyreStintsVisual2,
+                                tyreStintsVisual3,
+                                tyreStintsVisual4,
+                                tyreStintsVisual5,
+                                tyreStintsVisual6,
+                                tyreStintsVisual7,
+                                tyreStintsEndLaps0,
+                                tyreStintsEndLaps1,
+                                tyreStintsEndLaps2,
+                                tyreStintsEndLaps3,
+                                tyreStintsEndLaps4,
+                                tyreStintsEndLaps5,
+                                tyreStintsEndLaps6,
+                                tyreStintsEndLaps7
+                            ) VALUES (
+                                @numCars,
+                                @position,
+                                @numLaps,
+                                @gridPosition,
+                                @points,
+                                @numPitStops,
+                                @resultStatus,
+                                @bestLapTimeInMS,
+                                @totalRaceTime,
+                                @penaltiesTime,
+                                @numPenalties,
+                                @numTyreStints,
+                                @tyreStintsActual0,
+                                @tyreStintsActual1,
+                                @tyreStintsActual2,
+                                @tyreStintsActual3,
+                                @tyreStintsActual4,
+                                @tyreStintsActual5,
+                                @tyreStintsActual6,
+                                @tyreStintsActual7,
+                                @tyreStintsVisual0,
+                                @tyreStintsVisual1,
+                                @tyreStintsVisual2,
+                                @tyreStintsVisual3,
+                                @tyreStintsVisual4,
+                                @tyreStintsVisual5,
+                                @tyreStintsVisual6,
+                                @tyreStintsVisual7,
+                                @tyreStintsEndLaps0,
+                                @tyreStintsEndLaps1,
+                                @tyreStintsEndLaps2,
+                                @tyreStintsEndLaps3,
+                                @tyreStintsEndLaps4,
+                                @tyreStintsEndLaps5,
+                                @tyreStintsEndLaps6,
+                                @tyreStintsEndLaps7
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@numCars", numCars);
+                            cmd.Parameters.AddWithValue("@position", dataFinalClassification.position);
+                            cmd.Parameters.AddWithValue("@numLaps", dataFinalClassification.numLaps);
+                            cmd.Parameters.AddWithValue("@gridPosition", dataFinalClassification.gridPosition);
+                            cmd.Parameters.AddWithValue("@points", dataFinalClassification.points);
+                            cmd.Parameters.AddWithValue("@numPitStops", dataFinalClassification.numPitStops);
+                            cmd.Parameters.AddWithValue("@resultStatus", dataFinalClassification.resultStatus);
+                            cmd.Parameters.AddWithValue("@bestLapTimeInMS", dataFinalClassification.bestLapTimeInMS);
+                            cmd.Parameters.AddWithValue("@totalRaceTime", dataFinalClassification.totalRaceTime);
+                            cmd.Parameters.AddWithValue("@penaltiesTime", dataFinalClassification.penaltiesTime);
+                            cmd.Parameters.AddWithValue("@numPenalties", dataFinalClassification.numPenalties);
+                            cmd.Parameters.AddWithValue("@numTyreStints", dataFinalClassification.numTyreStints);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual0", dataFinalClassification.tyreStintsActual[0]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual1", dataFinalClassification.tyreStintsActual[1]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual2", dataFinalClassification.tyreStintsActual[2]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual3", dataFinalClassification.tyreStintsActual[3]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual4", dataFinalClassification.tyreStintsActual[4]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual5", dataFinalClassification.tyreStintsActual[5]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual6", dataFinalClassification.tyreStintsActual[6]);
+                            cmd.Parameters.AddWithValue("@tyreStintsActual7", dataFinalClassification.tyreStintsActual[7]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual0", dataFinalClassification.tyreStintsVisual[0]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual1", dataFinalClassification.tyreStintsVisual[1]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual2", dataFinalClassification.tyreStintsVisual[2]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual3", dataFinalClassification.tyreStintsVisual[3]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual4", dataFinalClassification.tyreStintsVisual[4]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual5", dataFinalClassification.tyreStintsVisual[5]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual6", dataFinalClassification.tyreStintsVisual[6]);
+                            cmd.Parameters.AddWithValue("@tyreStintsVisual7", dataFinalClassification.tyreStintsVisual[7]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps0", dataFinalClassification.tyreStintsEndLaps[0]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps1", dataFinalClassification.tyreStintsEndLaps[1]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps2", dataFinalClassification.tyreStintsEndLaps[2]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps3", dataFinalClassification.tyreStintsEndLaps[3]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps4", dataFinalClassification.tyreStintsEndLaps[4]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps5", dataFinalClassification.tyreStintsEndLaps[5]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps6", dataFinalClassification.tyreStintsEndLaps[6]);
+                            cmd.Parameters.AddWithValue("@tyreStintsEndLaps7", dataFinalClassification.tyreStintsEndLaps[7]);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"FINALCLASSIFICATION INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1306:
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of LobbyInfo of 1306B
+                        var headerLobbyInfo = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var numPlayers = br.ReadByte();
+                        var lobbyInfo = new LobbyInfo[22];
+                        for (var i = 0; i < 22; i++) lobbyInfo[i] = ReadLobbyInfo(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataLobbyInfo = lobbyInfo[headerLobbyInfo.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO LOBBYINFO (
+                                numPlayers,
+                                aiControlled,
+                                teamId,
+                                nationality,
+                                platform,
+                                name,
+                                carNumber,
+                                yourTelemetry,
+                                showOnlineNames,
+                                techLevel,
+                                readyStatus
+                            ) VALUES (
+                                @numPlayers,
+                                @aiControlled,
+                                @teamId,
+                                @nationality,
+                                @platform,
+                                @name,
+                                @carNumber,
+                                @yourTelemetry,
+                                @showOnlineNames,
+                                @techLevel,
+                                @readyStatus
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@numPlayers", numPlayers);
+                            cmd.Parameters.AddWithValue("@aiControlled", dataLobbyInfo.aiControlled);
+                            cmd.Parameters.AddWithValue("@teamId", dataLobbyInfo.teamId);
+                            cmd.Parameters.AddWithValue("@nationality", dataLobbyInfo.nationality);
+                            cmd.Parameters.AddWithValue("@platform", dataLobbyInfo.platform);
+                            var decodedLobbyInfoName = System.Text.Encoding.UTF8.GetString(dataLobbyInfo.name).TrimEnd('\0');
+                            cmd.Parameters.AddWithValue("@name", decodedLobbyInfoName);
+                            cmd.Parameters.AddWithValue("@carNumber", dataLobbyInfo.carNumber);
+                            cmd.Parameters.AddWithValue("@yourTelemetry", dataLobbyInfo.yourTelemetry);
+                            cmd.Parameters.AddWithValue("@showOnlineNames", dataLobbyInfo.showOnlineNames);
+                            cmd.Parameters.AddWithValue("@techLevel", dataLobbyInfo.techLevel);
+                            cmd.Parameters.AddWithValue("@readyStatus", dataLobbyInfo.readyStatus);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"LOBBYINFO INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 953:
+                        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of CarDamage of 953B
+                        var headerCarDamage = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carDamage = new CarDamage[22];
+                        for (var i = 0; i < 22; i++) carDamage[i] = ReadCarDamage(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        var dataCarDamage = carDamage[headerCarDamage.playerCarIndex];
+
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO CARDAMAGE (
+                                tyresWear0,
+                                tyresWear1,
+                                tyresWear2,
+                                tyresWear3,
+                                tyresDamage0,
+                                tyresDamage1,
+                                tyresDamage2,
+                                tyresDamage3,
+                                brakesDamage0,
+                                brakesDamage1,
+                                brakesDamage2,
+                                brakesDamage3,
+                                frontLeftWingDamage,
+                                frontRightWingDamage,
+                                rearWingDamage,
+                                floorDamage,
+                                diffuserDamage,
+                                sidepodDamage,
+                                drsFault,
+                                ersFault,
+                                gearBoxDamage,
+                                engineDamage,
+                                engineMGUHWear,
+                                engineESWear,
+                                engineCEWear,
+                                engineICEWear,
+                                engineMGUKWear,
+                                engineTCWear,
+                                engineBlown,
+                                engineSeized
+                            ) VALUES (
+                                @tyresWear0,
+                                @tyresWear1,
+                                @tyresWear2,
+                                @tyresWear3,
+                                @tyresDamage0,
+                                @tyresDamage1,
+                                @tyresDamage2,
+                                @tyresDamage3,
+                                @brakesDamage0,
+                                @brakesDamage1,
+                                @brakesDamage2,
+                                @brakesDamage3,
+                                @frontLeftWingDamage,
+                                @frontRightWingDamage,
+                                @rearWingDamage,
+                                @floorDamage,
+                                @diffuserDamage,
+                                @sidepodDamage,
+                                @drsFault,
+                                @ersFault,
+                                @gearBoxDamage,
+                                @engineDamage,
+                                @engineMGUHWear,
+                                @engineESWear,
+                                @engineCEWear,
+                                @engineICEWear,
+                                @engineMGUKWear,
+                                @engineTCWear,
+                                @engineBlown,
+                                @engineSeized
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@tyresWear0", dataCarDamage.tyresWear[0]);
+                            cmd.Parameters.AddWithValue("@tyresWear1", dataCarDamage.tyresWear[1]);
+                            cmd.Parameters.AddWithValue("@tyresWear2", dataCarDamage.tyresWear[2]);
+                            cmd.Parameters.AddWithValue("@tyresWear3", dataCarDamage.tyresWear[3]);
+                            cmd.Parameters.AddWithValue("@tyresDamage0", dataCarDamage.tyresDamage[0]);
+                            cmd.Parameters.AddWithValue("@tyresDamage1", dataCarDamage.tyresDamage[1]);
+                            cmd.Parameters.AddWithValue("@tyresDamage2", dataCarDamage.tyresDamage[2]);
+                            cmd.Parameters.AddWithValue("@tyresDamage3", dataCarDamage.tyresDamage[3]);
+                            cmd.Parameters.AddWithValue("@brakesDamage0", dataCarDamage.brakesDamage[0]);
+                            cmd.Parameters.AddWithValue("@brakesDamage1", dataCarDamage.brakesDamage[1]);
+                            cmd.Parameters.AddWithValue("@brakesDamage2", dataCarDamage.brakesDamage[2]);
+                            cmd.Parameters.AddWithValue("@brakesDamage3", dataCarDamage.brakesDamage[3]);
+                            cmd.Parameters.AddWithValue("@frontLeftWingDamage", dataCarDamage.frontLeftWingDamage);
+                            cmd.Parameters.AddWithValue("@frontRightWingDamage", dataCarDamage.frontRightWingDamage);
+                            cmd.Parameters.AddWithValue("@rearWingDamage", dataCarDamage.rearWingDamage);
+                            cmd.Parameters.AddWithValue("@floorDamage", dataCarDamage.floorDamage);
+                            cmd.Parameters.AddWithValue("@diffuserDamage", dataCarDamage.diffuserDamage);
+                            cmd.Parameters.AddWithValue("@sidepodDamage", dataCarDamage.sidepodDamage);
+                            cmd.Parameters.AddWithValue("@drsFault", dataCarDamage.drsFault);
+                            cmd.Parameters.AddWithValue("@ersFault", dataCarDamage.ersFault);
+                            cmd.Parameters.AddWithValue("@gearBoxDamage", dataCarDamage.gearBoxDamage);
+                            cmd.Parameters.AddWithValue("@engineDamage", dataCarDamage.engineDamage);
+                            cmd.Parameters.AddWithValue("@engineMGUHWear", dataCarDamage.engineMGUHWear);
+                            cmd.Parameters.AddWithValue("@engineESWear", dataCarDamage.engineESWear);
+                            cmd.Parameters.AddWithValue("@engineCEWear", dataCarDamage.engineCEWear);
+                            cmd.Parameters.AddWithValue("@engineICEWear", dataCarDamage.engineICEWear);
+                            cmd.Parameters.AddWithValue("@engineMGUKWear", dataCarDamage.engineMGUKWear);
+                            cmd.Parameters.AddWithValue("@engineTCWear", dataCarDamage.engineTCWear);
+                            cmd.Parameters.AddWithValue("@engineBlown", dataCarDamage.engineBlown);
+                            cmd.Parameters.AddWithValue("@engineSeized", dataCarDamage.engineSeized);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"CARDAMAGE INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 1460:
+                        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of SessionHistory of 1460B
+                        var dataSessionHistory = ReadSessionHistory(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO SESSIONHISTORY (
+                                carIdx,
+                                numLaps,
+                                numTyreStints,
+                                bestLapTimeLapNum,
+                                bestSector1LapNum,
+                                bestSector2LapNum,
+                                bestSector3LapNum,
+                                tyreStintHistory0_endLap, tyreStintHistory0_tyreActualCompound, tyreStintHistory0_tyreVisualCompound,
+                                tyreStintHistory1_endLap, tyreStintHistory1_tyreActualCompound, tyreStintHistory1_tyreVisualCompound,
+                                tyreStintHistory2_endLap, tyreStintHistory2_tyreActualCompound, tyreStintHistory2_tyreVisualCompound,
+                                tyreStintHistory3_endLap, tyreStintHistory3_tyreActualCompound, tyreStintHistory3_tyreVisualCompound,
+                                tyreStintHistory4_endLap, tyreStintHistory4_tyreActualCompound, tyreStintHistory4_tyreVisualCompound,
+                                tyreStintHistory5_endLap, tyreStintHistory5_tyreActualCompound, tyreStintHistory5_tyreVisualCompound,
+                                tyreStintHistory6_endLap, tyreStintHistory6_tyreActualCompound, tyreStintHistory6_tyreVisualCompound,
+                                tyreStintHistory7_endLap, tyreStintHistory7_tyreActualCompound, tyreStintHistory7_tyreVisualCompound
+                            ) VALUES (
+                                @carIdx,
+                                @numLaps,
+                                @numTyreStints,
+                                @bestLapTimeLapNum,
+                                @bestSector1LapNum,
+                                @bestSector2LapNum,
+                                @bestSector3LapNum,
+                                @tyreStintHistory0_endLap, @tyreStintHistory0_tyreActualCompound, @tyreStintHistory0_tyreVisualCompound,
+                                @tyreStintHistory1_endLap, @tyreStintHistory1_tyreActualCompound, @tyreStintHistory1_tyreVisualCompound,
+                                @tyreStintHistory2_endLap, @tyreStintHistory2_tyreActualCompound, @tyreStintHistory2_tyreVisualCompound,
+                                @tyreStintHistory3_endLap, @tyreStintHistory3_tyreActualCompound, @tyreStintHistory3_tyreVisualCompound,
+                                @tyreStintHistory4_endLap, @tyreStintHistory4_tyreActualCompound, @tyreStintHistory4_tyreVisualCompound,
+                                @tyreStintHistory5_endLap, @tyreStintHistory5_tyreActualCompound, @tyreStintHistory5_tyreVisualCompound,
+                                @tyreStintHistory6_endLap, @tyreStintHistory6_tyreActualCompound, @tyreStintHistory6_tyreVisualCompound,
+                                @tyreStintHistory7_endLap, @tyreStintHistory7_tyreActualCompound, @tyreStintHistory7_tyreVisualCompound
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@carIdx", dataSessionHistory.carIdx);
+                            cmd.Parameters.AddWithValue("@numLaps", dataSessionHistory.numLaps);
+                            cmd.Parameters.AddWithValue("@numTyreStints", dataSessionHistory.numTyreStints);
+                            cmd.Parameters.AddWithValue("@bestLapTimeLapNum", dataSessionHistory.bestLapTimeLapNum);
+                            cmd.Parameters.AddWithValue("@bestSector1LapNum", dataSessionHistory.bestSector1LapNum);
+                            cmd.Parameters.AddWithValue("@bestSector2LapNum", dataSessionHistory.bestSector2LapNum);
+                            cmd.Parameters.AddWithValue("@bestSector3LapNum", dataSessionHistory.bestSector3LapNum);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory0_endLap", dataSessionHistory.tyreStintHistory[0].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory0_tyreActualCompound", dataSessionHistory.tyreStintHistory[0].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory0_tyreVisualCompound", dataSessionHistory.tyreStintHistory[0].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory1_endLap", dataSessionHistory.tyreStintHistory[1].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory1_tyreActualCompound", dataSessionHistory.tyreStintHistory[1].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory1_tyreVisualCompound", dataSessionHistory.tyreStintHistory[1].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory2_endLap", dataSessionHistory.tyreStintHistory[2].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory2_tyreActualCompound", dataSessionHistory.tyreStintHistory[2].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory2_tyreVisualCompound", dataSessionHistory.tyreStintHistory[2].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory3_endLap", dataSessionHistory.tyreStintHistory[3].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory3_tyreActualCompound", dataSessionHistory.tyreStintHistory[3].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory3_tyreVisualCompound", dataSessionHistory.tyreStintHistory[3].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory4_endLap", dataSessionHistory.tyreStintHistory[4].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory4_tyreActualCompound", dataSessionHistory.tyreStintHistory[4].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory4_tyreVisualCompound", dataSessionHistory.tyreStintHistory[4].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory5_endLap",dataSessionHistory.tyreStintHistory[5].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory5_tyreActualCompound", dataSessionHistory.tyreStintHistory[5].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory5_tyreVisualCompound", dataSessionHistory.tyreStintHistory[5].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory6_endLap", dataSessionHistory.tyreStintHistory[6].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory6_tyreActualCompound", dataSessionHistory.tyreStintHistory[6].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory6_tyreVisualCompound", dataSessionHistory.tyreStintHistory[6].tyreVisualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory7_endLap", dataSessionHistory.tyreStintHistory[7].endLap);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory7_tyreActualCompound", dataSessionHistory.tyreStintHistory[7].tyreActualCompound);
+                            cmd.Parameters.AddWithValue("@tyreStintHistory7_tyreVisualCompound", dataSessionHistory.tyreStintHistory[7].tyreVisualCompound);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"TYRESET INSERT error: {ex.Message}");
+                            }
+                        }
+                        for (var i = 0; i < 8; i++)
+                        {
+                            await using (var cmd = new MySqlCommand(@"
+                                INSERT INTO SESSIONHISTORYLAPHISTORY (
+                                    lapTimeInMS,
+                                    sector1TimeInMS,
+                                    sector1TimeMinutes,
+                                    sector2TimeInMS,
+                                    sector2TimeMinutes,
+                                    sector3TimeInMS,
+                                    sector3TimeMinutes,
+                                    lapValidBitFlags
+                                ) VALUES (
+                                    @lapTimeInMS,
+                                    @sector1TimeInMS,
+                                    @sector1TimeMinutes,
+                                    @sector2TimeInMS,
+                                    @sector2TimeMinutes,
+                                    @sector3TimeInMS,
+                                    @sector3TimeMinutes,
+                                    @lapValidBitFlags
+                                );", conn
+                            ))
+                            {
+                                cmd.Parameters.AddWithValue("@lapTimeInMS", dataSessionHistory.lapHistory[i].lapTimeInMS);
+                                cmd.Parameters.AddWithValue("@sector1TimeInMS", dataSessionHistory.lapHistory[i].sector1TimeInMS);
+                                cmd.Parameters.AddWithValue("@sector1TimeMinutes", dataSessionHistory.lapHistory[i].sector1TimeMinutes);
+                                cmd.Parameters.AddWithValue("@sector2TimeInMS", dataSessionHistory.lapHistory[i].sector2TimeInMS);
+                                cmd.Parameters.AddWithValue("@sector2TimeMinutes", dataSessionHistory.lapHistory[i].sector2TimeMinutes);
+                                cmd.Parameters.AddWithValue("@sector3TimeInMS", dataSessionHistory.lapHistory[i].sector3TimeInMS);
+                                cmd.Parameters.AddWithValue("@sector3TimeMinutes", dataSessionHistory.lapHistory[i].sector3TimeMinutes);
+                                cmd.Parameters.AddWithValue("@lapValidBitFlags", dataSessionHistory.lapHistory[i].lapValidBitFlags);
+                                try
+                                {
+                                    await cmd.ExecuteNonQueryAsync(stoppingToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"TYRESET INSERT error: {ex.Message}");
+                                }
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 231:
+                        //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TyreSet of 231B
+                        var headerTyreSet = new Header
+                        {
+                            packetFormat = br.ReadUInt16(),
+                            gameYear = br.ReadByte(),
+                            gameMajorVersion = br.ReadByte(),
+                            gameMinorVersion = br.ReadByte(),
+                            packetVersion = br.ReadByte(),
+                            packetId = br.ReadByte(),
+                            sessionUID = br.ReadUInt64(),
+                            sessionTime = br.ReadSingle(),
+                            frameIdentifier = br.ReadUInt32(),
+                            overallFrameIdentifier = br.ReadUInt32(),
+                            playerCarIndex = br.ReadByte(),
+                            secondaryPlayerCarIndex = br.ReadByte()
+                        };
+                        var carIdx = br.ReadByte();
+                        var tyreSet = new TyreSet[20];
+                        for (var i = 0; i < 20; i++) tyreSet[i] = ReadTyreSet(br);
+                        var fittedIdx = br.ReadByte();
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        if (carIdx == headerTyreSet.playerCarIndex)
+                        {
+                            for (var i = 0; i < 20; i++)
+                            {
+                                await using var cmd = new MySqlCommand(@"
+                                    INSERT INTO TYRESET (
+                                        carIdx,
+                                        actualTyreCompound,
+                                        visualTyreCompound,
+                                        wear,
+                                        available,
+                                        recommendedSession,
+                                        lifeSpan,
+                                        usableLife,
+                                        lapDeltaTime,
+                                        fitted,
+                                        fittedIdx
+                                    ) VALUES (
+                                        @carIdx,
+                                        @actualTyreCompound,
+                                        @visualTyreCompound,
+                                        @wear,
+                                        @available,
+                                        @recommendedSession,
+                                        @lifeSpan,
+                                        @usableLife,
+                                        @lapDeltaTime,
+                                        @fitted,
+                                        @fittedIdx
+                                    );", conn
+                                );
+                                cmd.Parameters.AddWithValue("@carIdx", carIdx);
+                                cmd.Parameters.AddWithValue("@actualTyreCompound", tyreSet[i].actualTyreCompound);
+                                cmd.Parameters.AddWithValue("@visualTyreCompound", tyreSet[i].visualTyreCompound);
+                                cmd.Parameters.AddWithValue("@wear", tyreSet[i].wear);
+                                cmd.Parameters.AddWithValue("@available", tyreSet[i].available);
+                                cmd.Parameters.AddWithValue("@recommendedSession", tyreSet[i].recommendedSession);
+                                cmd.Parameters.AddWithValue("@lifeSpan", tyreSet[i].lifeSpan);
+                                cmd.Parameters.AddWithValue("@usableLife", tyreSet[i].usableLife);
+                                cmd.Parameters.AddWithValue("@lapDeltaTime", tyreSet[i].lapDeltaTime);
+                                cmd.Parameters.AddWithValue("@fitted", tyreSet[i].fitted);
+                                cmd.Parameters.AddWithValue("@fittedIdx", fittedIdx);
+                                try
+                                {
+                                    await cmd.ExecuteNonQueryAsync(stoppingToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"TYRESET {i} INSERT error: {ex.Message}");
+                                }
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 237:
+                        //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of MotionEx of 237B
+                        var dataMotionEx = ReadMotionEx(br);
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO MOTIONEX (
+                                suspensionPosition0, suspensionPosition1, suspensionPosition2, suspensionPosition3,
+                                suspensionVelocity0, suspensionVelocity1, suspensionVelocity2, suspensionVelocity3,
+                                suspensionAcceleration0, suspensionAcceleration1, suspensionAcceleration2, suspensionAcceleration3,
+                                wheelSpeed0, wheelSpeed1, wheelSpeed2, wheelSpeed3,
+                                wheelSlipRatio0, wheelSlipRatio1, wheelSlipRatio2, wheelSlipRatio3,
+                                wheelSlipAngle0, wheelSlipAngle1, wheelSlipAngle2, wheelSlipAngle3,
+                                wheelLatForce0, wheelLatForce1, wheelLatForce2, wheelLatForce3,
+                                wheelLongForce0, wheelLongForce1, wheelLongForce2, wheelLongForce3,
+                                heightOfCOGAboveGround,
+                                localVelocityX, localVelocityY, localVelocityZ,
+                                angularVelocityX, angularVelocityY, angularVelocityZ,
+                                angularAccelerationX, angularAccelerationY, angularAccelerationZ,
+                                frontWheelsAngle,
+                                wheelVertForce0, wheelVertForce1, wheelVertForce2, wheelVertForce3,
+                                frontAeroHeight, rearAeroHeight,
+                                frontRollAngle, rearRollAngle,
+                                chassisYaw
+                            ) VALUES (
+                                @suspensionPosition0, @suspensionPosition1, @suspensionPosition2, @suspensionPosition3,
+                                @suspensionVelocity0, @suspensionVelocity1, @suspensionVelocity2, @suspensionVelocity3,
+                                @suspensionAcceleration0, @suspensionAcceleration1, @suspensionAcceleration2, @suspensionAcceleration3,
+                                @wheelSpeed0, @wheelSpeed1, @wheelSpeed2, @wheelSpeed3,
+                                @wheelSlipRatio0, @wheelSlipRatio1, @wheelSlipRatio2, @wheelSlipRatio3,
+                                @wheelSlipAngle0, @wheelSlipAngle1, @wheelSlipAngle2, @wheelSlipAngle3,
+                                @wheelLatForce0, @wheelLatForce1, @wheelLatForce2, @wheelLatForce3,
+                                @wheelLongForce0, @wheelLongForce1, @wheelLongForce2, @wheelLongForce3,
+                                @heightOfCOGAboveGround,
+                                @localVelocityX, @localVelocityY, @localVelocityZ,
+                                @angularVelocityX, @angularVelocityY, @angularVelocityZ,
+                                @angularAccelerationX, @angularAccelerationY, @angularAccelerationZ,
+                                @frontWheelsAngle,
+                                @wheelVertForce0, @wheelVertForce1, @wheelVertForce2, @wheelVertForce3,
+                                @frontAeroHeight, @rearAeroHeight,
+                                @frontRollAngle, @rearRollAngle,
+                                @chassisYaw
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@suspensionPosition0", dataMotionEx.suspensionPosition[0]);
+                            cmd.Parameters.AddWithValue("@suspensionPosition1", dataMotionEx.suspensionPosition[1]);
+                            cmd.Parameters.AddWithValue("@suspensionPosition2", dataMotionEx.suspensionPosition[2]);
+                            cmd.Parameters.AddWithValue("@suspensionPosition3", dataMotionEx.suspensionPosition[3]);
+                            cmd.Parameters.AddWithValue("@suspensionVelocity0", dataMotionEx.suspensionVelocity[0]);
+                            cmd.Parameters.AddWithValue("@suspensionVelocity1", dataMotionEx.suspensionVelocity[1]);
+                            cmd.Parameters.AddWithValue("@suspensionVelocity2", dataMotionEx.suspensionVelocity[2]);
+                            cmd.Parameters.AddWithValue("@suspensionVelocity3", dataMotionEx.suspensionVelocity[3]);
+                            cmd.Parameters.AddWithValue("@suspensionAcceleration0", dataMotionEx.suspensionAcceleration[0]);
+                            cmd.Parameters.AddWithValue("@suspensionAcceleration1", dataMotionEx.suspensionAcceleration[1]);
+                            cmd.Parameters.AddWithValue("@suspensionAcceleration2", dataMotionEx.suspensionAcceleration[2]);
+                            cmd.Parameters.AddWithValue("@suspensionAcceleration3", dataMotionEx.suspensionAcceleration[3]);
+                            cmd.Parameters.AddWithValue("@wheelSpeed0", dataMotionEx.wheelSpeed[0]);
+                            cmd.Parameters.AddWithValue("@wheelSpeed1", dataMotionEx.wheelSpeed[1]);
+                            cmd.Parameters.AddWithValue("@wheelSpeed2", dataMotionEx.wheelSpeed[2]);
+                            cmd.Parameters.AddWithValue("@wheelSpeed3", dataMotionEx.wheelSpeed[3]);
+                            cmd.Parameters.AddWithValue("@wheelSlipRatio0", dataMotionEx.wheelSlipRatio[0]);
+                            cmd.Parameters.AddWithValue("@wheelSlipRatio1", dataMotionEx.wheelSlipRatio[1]);
+                            cmd.Parameters.AddWithValue("@wheelSlipRatio2", dataMotionEx.wheelSlipRatio[2]);
+                            cmd.Parameters.AddWithValue("@wheelSlipRatio3", dataMotionEx.wheelSlipRatio[3]);
+                            cmd.Parameters.AddWithValue("@wheelSlipAngle0", dataMotionEx.wheelSlipAngle[0]);
+                            cmd.Parameters.AddWithValue("@wheelSlipAngle1", dataMotionEx.wheelSlipAngle[1]);
+                            cmd.Parameters.AddWithValue("@wheelSlipAngle2", dataMotionEx.wheelSlipAngle[2]);
+                            cmd.Parameters.AddWithValue("@wheelSlipAngle3", dataMotionEx.wheelSlipAngle[3]);
+                            cmd.Parameters.AddWithValue("@wheelLatForce0", dataMotionEx.wheelLatForce[0]);
+                            cmd.Parameters.AddWithValue("@wheelLatForce1", dataMotionEx.wheelLatForce[1]);
+                            cmd.Parameters.AddWithValue("@wheelLatForce2", dataMotionEx.wheelLatForce[2]);
+                            cmd.Parameters.AddWithValue("@wheelLatForce3", dataMotionEx.wheelLatForce[3]);
+                            cmd.Parameters.AddWithValue("@wheelLongForce0", dataMotionEx.wheelLongForce[0]);
+                            cmd.Parameters.AddWithValue("@wheelLongForce1", dataMotionEx.wheelLongForce[1]);
+                            cmd.Parameters.AddWithValue("@wheelLongForce2", dataMotionEx.wheelLongForce[2]);
+                            cmd.Parameters.AddWithValue("@wheelLongForce3", dataMotionEx.wheelLongForce[3]);
+                            cmd.Parameters.AddWithValue("@heightOfCOGAboveGround", dataMotionEx.heightOfCOGAboveGround);
+                            cmd.Parameters.AddWithValue("@localVelocityX", dataMotionEx.localVelocityX);
+                            cmd.Parameters.AddWithValue("@localVelocityY", dataMotionEx.localVelocityY);
+                            cmd.Parameters.AddWithValue("@localVelocityZ", dataMotionEx.localVelocityZ);
+                            cmd.Parameters.AddWithValue("@angularVelocityX", dataMotionEx.angularVelocityX);
+                            cmd.Parameters.AddWithValue("@angularVelocityY", dataMotionEx.angularVelocityY);
+                            cmd.Parameters.AddWithValue("@angularVelocityZ", dataMotionEx.angularVelocityZ);
+                            cmd.Parameters.AddWithValue("@angularAccelerationX", dataMotionEx.angularAccelerationX);
+                            cmd.Parameters.AddWithValue("@angularAccelerationY", dataMotionEx.angularAccelerationY);
+                            cmd.Parameters.AddWithValue("@angularAccelerationZ", dataMotionEx.angularAccelerationZ);
+                            cmd.Parameters.AddWithValue("@frontWheelsAngle", dataMotionEx.frontWheelsAngle);
+                            cmd.Parameters.AddWithValue("@wheelVertForce0", dataMotionEx.wheelVertForce[0]);
+                            cmd.Parameters.AddWithValue("@wheelVertForce1", dataMotionEx.wheelVertForce[1]);
+                            cmd.Parameters.AddWithValue("@wheelVertForce2", dataMotionEx.wheelVertForce[2]);
+                            cmd.Parameters.AddWithValue("@wheelVertForce3", dataMotionEx.wheelVertForce[3]);
+                            cmd.Parameters.AddWithValue("@frontAeroHeight", dataMotionEx.frontAeroHeight);
+                            cmd.Parameters.AddWithValue("@rearAeroHeight", dataMotionEx.rearAeroHeight);
+                            cmd.Parameters.AddWithValue("@frontRollAngle", dataMotionEx.frontRollAngle);
+                            cmd.Parameters.AddWithValue("@rearRollAngle", dataMotionEx.rearRollAngle);
+                            cmd.Parameters.AddWithValue("@chassisYaw", dataMotionEx.chassisYaw);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"MOTIONEX INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                    case 101:
+                        //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------start of TimeTrial of 101B
+                        br.ReadUInt16(); //packetFormat
+                        br.ReadByte(); //gameYear
+                        br.ReadByte(); //gameMajorVersion
+                        br.ReadByte(); //gameMinorVersion
+                        br.ReadByte(); //packetVersion
+                        br.ReadByte(); //packetId
+                        br.ReadUInt64(); //sessionUID
+                        br.ReadSingle(); //sessionTime
+                        br.ReadUInt32(); //frameIdentifier
+                        br.ReadUInt32(); //overallFrameIdentifier
+                        br.ReadByte(); //playerCarIndex
+                        br.ReadByte(); //secondaryPlayerCarIndex
+                        var dataPlayerSessionBestDataSet = ReadTimeTrial(br);
+                        var dataPersonalBestDataSet = ReadTimeTrial(br);
+                        ReadTimeTrial(br); //dataRivalDataSet
+                        //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------end
+                        await using (var cmd = new MySqlCommand(@"
+                            INSERT INTO TIMETRIAL (
+                                playerSessionBestDataSet_carIdx,
+                                playerSessionBestDataSet_teamId,
+                                playerSessionBestDataSet_lapTimeInMS,
+                                playerSessionBestDataSet_sector1TimeInMS,
+                                playerSessionBestDataSet_sector2TimeInMS,
+                                playerSessionBestDataSet_sector3TimeInMS,
+                                playerSessionBestDataSet_tractionControl,
+                                playerSessionBestDataSet_gearboxAssist,
+                                playerSessionBestDataSet_antiLockBrakes,
+                                playerSessionBestDataSet_equalCarPerformance,
+                                playerSessionBestDataSet_customSetup,
+                                playerSessionBestDataSet_valid,
+                                personalBestDataSet_carIdx,
+                                personalBestDataSet_teamId,
+                                personalBestDataSet_lapTimeInMS,
+                                personalBestDataSet_sector1TimeInMS,
+                                personalBestDataSet_sector2TimeInMS,
+                                personalBestDataSet_sector3TimeInMS,
+                                personalBestDataSet_tractionControl,
+                                personalBestDataSet_gearboxAssist,
+                                personalBestDataSet_antiLockBrakes,
+                                personalBestDataSet_equalCarPerformance,
+                                personalBestDataSet_customSetup,
+                                personalBestDataSet_valid
+                            ) VALUES (
+                                @playerSessionBestDataSet_carIdx,
+                                @playerSessionBestDataSet_teamId,
+                                @playerSessionBestDataSet_lapTimeInMS,
+                                @playerSessionBestDataSet_sector1TimeInMS,
+                                @playerSessionBestDataSet_sector2TimeInMS,
+                                @playerSessionBestDataSet_sector3TimeInMS,
+                                @playerSessionBestDataSet_tractionControl,
+                                @playerSessionBestDataSet_gearboxAssist,
+                                @playerSessionBestDataSet_antiLockBrakes,
+                                @playerSessionBestDataSet_equalCarPerformance,
+                                @playerSessionBestDataSet_customSetup,
+                                @playerSessionBestDataSet_valid,
+                                @personalBestDataSet_carIdx,
+                                @personalBestDataSet_teamId,
+                                @personalBestDataSet_lapTimeInMS,
+                                @personalBestDataSet_sector1TimeInMS,
+                                @personalBestDataSet_sector2TimeInMS,
+                                @personalBestDataSet_sector3TimeInMS,
+                                @personalBestDataSet_tractionControl,
+                                @personalBestDataSet_gearboxAssist,
+                                @personalBestDataSet_antiLockBrakes,
+                                @personalBestDataSet_equalCarPerformance,
+                                @personalBestDataSet_customSetup,
+                                @personalBestDataSet_valid
+                            );", conn
+                        ))
+                        {
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_carIdx", dataPlayerSessionBestDataSet.carIdx);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_teamId", dataPlayerSessionBestDataSet.teamId);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_lapTimeInMS", dataPlayerSessionBestDataSet.lapTimeInMS);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_sector1TimeInMS", dataPlayerSessionBestDataSet.sector1TimeInMS);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_sector2TimeInMS", dataPlayerSessionBestDataSet.sector2TimeInMS);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_sector3TimeInMS", dataPlayerSessionBestDataSet.sector3TimeInMS);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_tractionControl", dataPlayerSessionBestDataSet.tractionControl);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_gearboxAssist", dataPlayerSessionBestDataSet.gearboxAssist);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_antiLockBrakes", dataPlayerSessionBestDataSet.antiLockBrakes);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_equalCarPerformance", dataPlayerSessionBestDataSet.equalCarPerformance);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_customSetup", dataPlayerSessionBestDataSet.customSetup);
+                            cmd.Parameters.AddWithValue("@playerSessionBestDataSet_valid", dataPlayerSessionBestDataSet.valid);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_carIdx", dataPersonalBestDataSet.carIdx);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_teamId", dataPersonalBestDataSet.teamId);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_lapTimeInMS", dataPersonalBestDataSet.lapTimeInMS);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_sector1TimeInMS", dataPersonalBestDataSet.sector1TimeInMS);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_sector2TimeInMS", dataPersonalBestDataSet.sector2TimeInMS);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_sector3TimeInMS", dataPersonalBestDataSet.sector3TimeInMS);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_tractionControl", dataPersonalBestDataSet.tractionControl);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_gearboxAssist", dataPersonalBestDataSet.gearboxAssist);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_antiLockBrakes", dataPersonalBestDataSet.antiLockBrakes);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_equalCarPerformance", dataPersonalBestDataSet.equalCarPerformance);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_customSetup", dataPersonalBestDataSet.customSetup);
+                            cmd.Parameters.AddWithValue("@personalBestDataSet_valid", dataPersonalBestDataSet.valid);
+                            try
+                            {
+                                await cmd.ExecuteNonQueryAsync(stoppingToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"TIMETRIAL INSERT error: {ex.Message}");
+                            }
+                        }
+                        break;
                 }
             }
         }
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------Readers
-        private CarMotion ReadCarMotion(BinaryReader br)
+        private static CarMotion ReadCarMotion(BinaryReader br)
         {
             CarMotion carMotion = new();
             try
@@ -819,7 +1842,7 @@ namespace PacketVisionListener
             return carMotion;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private Session ReadSession(BinaryReader br)
+        private static Session ReadSession(BinaryReader br)
         {
             Session session = new();
             try
@@ -841,7 +1864,7 @@ namespace PacketVisionListener
                 session.sliProNativeSupport = br.ReadByte();
                 session.numMarshalZones = br.ReadByte();
                 session.marshalZones = new MarshalZone[21];
-                for (int i = 0; i < 21; i++)
+                for (var i = 0; i < 21; i++)
                 {
                     session.marshalZones[i].zoneStart = br.ReadSingle();
                     session.marshalZones[i].zoneFlag = br.ReadSByte();
@@ -850,7 +1873,7 @@ namespace PacketVisionListener
                 session.networkGame = br.ReadByte();
                 session.numWeatherForecastSamples = br.ReadByte();
                 session.weatherForecastSamples = new WeatherForecastSample[64];
-                for (int i = 0; i < 64; i++)
+                for (var i = 0; i < 64; i++)
                 {
                     session.weatherForecastSamples[i].sessionType = br.ReadByte();
                     session.weatherForecastSamples[i].timeOffset = br.ReadByte();
@@ -914,22 +1937,7 @@ namespace PacketVisionListener
                 session.affectsLicenceLevelSolo = br.ReadByte();
                 session.affectsLicenceLevelMP = br.ReadByte();
                 session.numSessionsInWeekend = br.ReadByte();
-                session.weekendStructure = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-
-                };
+                session.weekendStructure = br.ReadBytes(12);
                 session.sector2LapDistanceStart = br.ReadSingle();
                 session.sector3LapDistanceStart = br.ReadSingle();
             }
@@ -940,7 +1948,7 @@ namespace PacketVisionListener
             return session;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private Lap ReadLap(BinaryReader br)
+        private static Lap ReadLap(BinaryReader br)
         {
             Lap lap = new();
             try
@@ -986,13 +1994,13 @@ namespace PacketVisionListener
             return lap;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private Event ReadEvent(BinaryReader br)
+        private static Event ReadEvent(BinaryReader br)
         {
             Event evenT = new();
             try
             {
                 evenT.eventStringCode = br.ReadBytes(4);
-                string eventCode = System.Text.Encoding.ASCII.GetString(evenT.eventStringCode);
+                var eventCode = System.Text.Encoding.ASCII.GetString(evenT.eventStringCode);
                 switch (eventCode)
                 {
                     case "FTLP":
@@ -1053,8 +2061,7 @@ namespace PacketVisionListener
                         evenT.eventDetails.Collision.vehicle1Idx = br.ReadByte();
                         evenT.eventDetails.Collision.vehicle2Idx = br.ReadByte();
                         break;
-                    default:
-                        break; // Other events like SSTA, SEND, DRSE, DRSD, CHQF, LGOT, RDFL don't carry extra data
+                    // Other events like SSTA, SEND, DRSE, DRSD, CHQF, LGOT, RDFL don't carry extra data
                 }
             }
             catch (EndOfStreamException)
@@ -1064,7 +2071,7 @@ namespace PacketVisionListener
             return evenT;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private Participants ReadParticipants(BinaryReader br)
+        private static Participants ReadParticipants(BinaryReader br)
         {
             Participants participants = new();
             try
@@ -1089,7 +2096,7 @@ namespace PacketVisionListener
             return participants;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private CarSetup ReadCarSetup(BinaryReader br)
+        private static CarSetup ReadCarSetup(BinaryReader br)
         {
             CarSetup carSetup = new();
             try
@@ -1125,7 +2132,7 @@ namespace PacketVisionListener
             return carSetup;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private CarTelemetry ReadCarTelemetry(BinaryReader br)
+        private static CarTelemetry ReadCarTelemetry(BinaryReader br)
         {
             CarTelemetry carTelemetry = new();
             try
@@ -1140,42 +2147,24 @@ namespace PacketVisionListener
                 carTelemetry.drs = br.ReadByte();
                 carTelemetry.revLightsPercent = br.ReadByte();
                 carTelemetry.revLightsBitValue = br.ReadUInt16();
-                carTelemetry.brakesTemperature = new ushort[]
-                {
+                carTelemetry.brakesTemperature =
+                [
                     br.ReadUInt16(),
                     br.ReadUInt16(),
                     br.ReadUInt16(),
                     br.ReadUInt16()
-                };
-                carTelemetry.tyresSurfaceTemperature = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
-                carTelemetry.tyresInnerTemperature = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
+                ];
+                carTelemetry.tyresSurfaceTemperature = br.ReadBytes(4);
+                carTelemetry.tyresInnerTemperature = br.ReadBytes(4);
                 carTelemetry.engineTemperature = br.ReadUInt16();
-                carTelemetry.tyresPressure = new float[]
-                {
+                carTelemetry.tyresPressure =
+                [
                     br.ReadSingle(),
                     br.ReadSingle(),
                     br.ReadSingle(),
                     br.ReadSingle()
-                };
-                carTelemetry.surfaceType = new byte[]
-                {
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte(),
-                    br.ReadByte()
-                };
+                ];
+                carTelemetry.surfaceType = br.ReadBytes(4);
             }
             catch (EndOfStreamException)
             {
@@ -1184,7 +2173,7 @@ namespace PacketVisionListener
             return carTelemetry;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private CarStatus ReadCarStatus(BinaryReader br)
+        private static CarStatus ReadCarStatus(BinaryReader br)
         {
             CarStatus carStatus = new();
             try
@@ -1222,7 +2211,7 @@ namespace PacketVisionListener
             return carStatus;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private FinalClassification ReadFinalClassification(BinaryReader br)
+        private static FinalClassification ReadFinalClassification(BinaryReader br)
         {
             FinalClassification finalClassification = new();
             try
@@ -1249,7 +2238,7 @@ namespace PacketVisionListener
             return finalClassification;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private LobbyInfo ReadLobbyInfo(BinaryReader br)
+        private static LobbyInfo ReadLobbyInfo(BinaryReader br)
         {
             LobbyInfo lobbyInfo = new();
             try
@@ -1272,13 +2261,13 @@ namespace PacketVisionListener
             return lobbyInfo;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private CarDamage ReadCarDamage(BinaryReader br)
+        private static CarDamage ReadCarDamage(BinaryReader br)
         {
             CarDamage carDamage = new();
             try
             {
                 carDamage.tyresWear = new float[4];
-                for (int i = 0; i < 4; i++) carDamage.tyresWear[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) carDamage.tyresWear[i] = br.ReadSingle();
                 carDamage.tyresDamage = br.ReadBytes(4);
                 carDamage.brakesDamage = br.ReadBytes(4);
                 carDamage.frontLeftWingDamage = br.ReadByte();
@@ -1307,7 +2296,7 @@ namespace PacketVisionListener
             return carDamage;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private SessionHistory ReadSessionHistory(BinaryReader br)
+        private static SessionHistory ReadSessionHistory(BinaryReader br)
         {
             SessionHistory sessionHistory = new();
             try
@@ -1320,7 +2309,7 @@ namespace PacketVisionListener
                 sessionHistory.bestSector2LapNum = br.ReadByte();
                 sessionHistory.bestSector3LapNum = br.ReadByte();
                 sessionHistory.lapHistory = new LapHistory[100];
-                for (int i = 0; i < 100; i++)
+                for (var i = 0; i < 100; i++)
                 {
                     sessionHistory.lapHistory[i].lapTimeInMS = br.ReadUInt32();
                     sessionHistory.lapHistory[i].sector1TimeInMS = br.ReadUInt16();
@@ -1332,7 +2321,7 @@ namespace PacketVisionListener
                     sessionHistory.lapHistory[i].lapValidBitFlags = br.ReadByte();
                 }
                 sessionHistory.tyreStintHistory = new TyreStintHistory[8];
-                for (int i = 0; i < 8; i++)
+                for (var i = 0; i < 8; i++)
                 {
                     sessionHistory.tyreStintHistory[i].endLap = br.ReadByte();
                     sessionHistory.tyreStintHistory[i].tyreActualCompound = br.ReadByte();
@@ -1346,7 +2335,7 @@ namespace PacketVisionListener
             return sessionHistory;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private TyreSet ReadTyreSet(BinaryReader br)
+        private static TyreSet ReadTyreSet(BinaryReader br)
         {
             TyreSet tyreSet = new();
             try
@@ -1368,27 +2357,27 @@ namespace PacketVisionListener
             return tyreSet;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private MotionEx ReadMotionEx(BinaryReader br)
+        private static MotionEx ReadMotionEx(BinaryReader br)
         {
             MotionEx motionEx = new();
             try
             {
                 motionEx.suspensionPosition = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.suspensionPosition[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.suspensionPosition[i] = br.ReadSingle();
                 motionEx.suspensionVelocity = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.suspensionVelocity[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.suspensionVelocity[i] = br.ReadSingle();
                 motionEx.suspensionAcceleration = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.suspensionAcceleration[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.suspensionAcceleration[i] = br.ReadSingle();
                 motionEx.wheelSpeed = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelSpeed[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelSpeed[i] = br.ReadSingle();
                 motionEx.wheelSlipRatio = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelSlipRatio[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelSlipRatio[i] = br.ReadSingle();
                 motionEx.wheelSlipAngle = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelSlipAngle[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelSlipAngle[i] = br.ReadSingle();
                 motionEx.wheelLatForce = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelLatForce[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelLatForce[i] = br.ReadSingle();
                 motionEx.wheelLongForce = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelLongForce[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelLongForce[i] = br.ReadSingle();
                 motionEx.heightOfCOGAboveGround = br.ReadSingle();
                 motionEx.localVelocityX = br.ReadSingle();
                 motionEx.localVelocityY = br.ReadSingle();
@@ -1401,7 +2390,7 @@ namespace PacketVisionListener
                 motionEx.angularAccelerationZ = br.ReadSingle();
                 motionEx.frontWheelsAngle = br.ReadSingle();
                 motionEx.wheelVertForce = new float[4];
-                for (int i = 0; i < 4; i++) motionEx.wheelVertForce[i] = br.ReadSingle();
+                for (var i = 0; i < 4; i++) motionEx.wheelVertForce[i] = br.ReadSingle();
                 motionEx.frontAeroHeight = br.ReadSingle();
                 motionEx.rearAeroHeight = br.ReadSingle();
                 motionEx.frontRollAngle = br.ReadSingle();
@@ -1415,7 +2404,7 @@ namespace PacketVisionListener
             return motionEx;
         }
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        private TimeTrial ReadTimeTrial(BinaryReader br)
+        private static TimeTrial ReadTimeTrial(BinaryReader br)
         {
             TimeTrial timeTrial = new();
             try
@@ -1480,15 +2469,6 @@ namespace PacketVisionListener
         public float pitch; // Pitch angle in radians
         public float roll; // Roll angle in radians
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    struct PacketMotionData
-    {
-        public PacketHeader header; // Header
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public CarMotionData[] carMotionData; // Data for all cars on track
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct MarshalZone
@@ -1619,7 +2599,7 @@ namespace PacketVisionListener
         public byte totalWarnings; // Accumulated number of warnings issued
         public byte cornerCuttingWarnings; // Accumulated number of corner cutting warnings issued
         public byte numUnservedDriveThroughPens; // Num drive through pens left to serve
-        public byte numUnservedStopGoPens; // Num stop go pens left to serve
+        public byte numUnservedStopGoPens; // Num stop-go pens left to serve
         public byte gridPosition; // Grid position the vehicle started the race in
         public byte driverStatus; // Status of driver - 0 = in garage, 1 = flying lap, 2 = in lap, 3 = out lap, 4 = on track
         public byte resultStatus; // Result status - 0 = invalid, 1 = inactive, 2 = active, 3 = finished, 4 = didnotfinish, 5 = disqualified, 6 = not classified, 7 = retired
@@ -1630,17 +2610,6 @@ namespace PacketVisionListener
         public float speedTrapFastestSpeed; // Fastest speed through speed trap for this car in kmph
         public byte speedTrapFastestLap; // Lap no the fastest speed was achieved, 255 = not set
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    struct PacketLapData
-    {
-        public PacketHeader header; // Header
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public LapData[] lapData; // Lap data for all cars on track
-        public byte timeTrialPBCarIdx; // Index of Personal Best car in time trial (255 if invalid)
-        public byte timeTrialRivalCarIdx; // Index of Rival car in time trial (255 if invalid)
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct Event
@@ -1667,29 +2636,6 @@ namespace PacketVisionListener
         [FieldOffset(0)] public Overtake Overtake;
         [FieldOffset(0)] public SafetyCar SafetyCar;
         [FieldOffset(0)] public Collision Collision;
-        /*
-         Session Started	�SSTA�	Sent when the session starts
-            Session Ended	�SEND�	Sent when the session ends
-            Fastest Lap	�FTLP�	When a driver achieves the fastest lap
-            Retirement	�RTMT�	When a driver retires
-            DRS enabled	�DRSE�	Race control have enabled DRS
-            DRS disabled	�DRSD�	Race control have disabled DRS
-            Team mate in pits	�TMPT�	Your team mate has entered the pits
-            Chequered flag	�CHQF�	The chequered flag has been waved
-            Race Winner	�RCWN�	The race winner is announced
-            Penalty Issued	�PENA�	A penalty has been issued � details in event
-            Speed Trap Triggered	�SPTP�	Speed trap has been triggered by fastest speed
-            Start lights	�STLG�	Start lights � number shown
-            Lights out	�LGOT�	Lights out
-            Drive through served	�DTSV�	Drive through penalty served
-            Stop go served	�SGSV�	Stop go penalty served
-            Flashback	�FLBK�	Flashback activated
-            Button status	�BUTN�	Button status changed
-            Red Flag	�RDFL�	Red flag shown
-            Overtake	�OVTK�	Overtake occurred
-            Safety Car	"SCAR"	Safety car event - details in event
-            Collision	"COLL"	Collision between two vehicles has occurred
-        */
     }
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct FastestLap
@@ -1795,16 +2741,6 @@ namespace PacketVisionListener
         public ushort techLevel; // F1 World tech level
         public byte platform; // Platform ID
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketParticipantsData
-    {
-        public PacketHeader header;       // Header
-        public byte numActiveCars;        // Number of active cars
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public ParticipantData[] participants; // Array of 22 participants
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct CarSetup
@@ -1833,16 +2769,6 @@ namespace PacketVisionListener
         public byte ballast; // Ballast
         public float fuelLoad; // Fuel load
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketCarSetupData
-    {
-        public PacketHeader header;       // Header
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public CarSetupData[] carSetups;  // 22 cars' setups
-        public float nextFrontWingValue;  // Front wing value after next pit stop
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct CarTelemetry
@@ -1899,15 +2825,6 @@ namespace PacketVisionListener
         public float ersDeployedThisLap; // deployed this lap
         public byte networkPaused; // 1 = paused
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketCarStatusData
-    {
-        public PacketHeader header;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public CarStatusData[] carStatusData;
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct FinalClassification
@@ -1930,16 +2847,6 @@ namespace PacketVisionListener
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
         public byte[] tyreStintsEndLaps; // Lap each stint ended on
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketFinalClassificationData
-    {
-        public PacketHeader header;
-        public byte numCars; // Number of cars classified
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public FinalClassificationData[] classificationData;
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct LobbyInfo
@@ -1956,16 +2863,6 @@ namespace PacketVisionListener
         public ushort techLevel; // F1 World tech level
         public byte readyStatus; // 0 = not ready, 1 = ready, 2 = spectating
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketLobbyInfoData
-    {
-        public PacketHeader header;
-        public byte numPlayers; // Number of players in lobby
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public LobbyInfoData[] lobbyPlayers;
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct CarDamage
@@ -1995,15 +2892,6 @@ namespace PacketVisionListener
         public byte engineBlown; // 0 = OK, 1 = fault
         public byte engineSeized; // 0 = OK, 1 = fault
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketCarDamageData
-    {
-        public PacketHeader header;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 22)]
-        public CarDamageData[] carDamageData;
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct LapHistory
@@ -2031,10 +2919,10 @@ namespace PacketVisionListener
         public byte carIdx; // Index of car
         public byte numLaps; // Total laps (including current)
         public byte numTyreStints; // Total stints
-        public byte bestLapTimeLapNum; // Lap of best lap
-        public byte bestSector1LapNum; // Lap of best sector 1
-        public byte bestSector2LapNum; // Lap of best sector 2
-        public byte bestSector3LapNum; // Lap of best sector 3
+        public byte bestLapTimeLapNum; // Lap of the best lap
+        public byte bestSector1LapNum; // Lap of the best sector 1
+        public byte bestSector2LapNum; // Lap of the best sector 2
+        public byte bestSector3LapNum; // Lap of the best sector 3
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 100)]
         public LapHistory[] lapHistory;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
@@ -2054,17 +2942,6 @@ namespace PacketVisionListener
         public short lapDeltaTime; // Delta time (ms)
         public byte fitted; // 1 = fitted
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketTyreSetsData
-    {
-        public PacketHeader header;
-        public byte carIdx;                     // Car index
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 20)]
-        public TyreSetData[] tyreSetData;       // 20 tyre sets
-        public byte fittedIdx;                  // Index of fitted set
-    }
-    */
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct MotionEx
@@ -2122,14 +2999,4 @@ namespace PacketVisionListener
         public byte customSetup; // 0 = No, 1 = Yes
         public byte valid; // 0 = invalid, 1 = valid
     }
-    /*
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PacketTimeTrialData
-    {
-        public PacketHeader header;
-        public TimeTrialDataSet playerSessionBestDataSet;
-        public TimeTrialDataSet personalBestDataSet;
-        public TimeTrialDataSet rivalDataSet;
-    }
-    */
 }

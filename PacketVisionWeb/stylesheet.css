@@ -1,6 +1,6 @@
 ﻿@font-face {
     font-family: 'Digital';
-    src: url('F1Wide.woff') format('woff');
+    src: url('F1Wide.otf') format('opentype');
     font-weight: normal;
     font-style: normal;
 }
@@ -15,7 +15,7 @@ body {
     text-align: center;
     background: #222;
     color: #eee;
-    font-family: 'Digital';
+    font-family: 'Digital', serif;
     overflow: hidden;
 }
 #header {

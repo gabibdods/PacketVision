@@ -1,11 +1,16 @@
 services:
   listener:
+    environment:
+      L_PORT: ${L_PORT}
+      DB_PORT: ${DB_PORT}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASS: ${MYSQL_PASSWORD}
     build:
       context: ./PacketVisionListener
       dockerfile: Dockerfile
     container_name: pvL
     ports:
-      - "20777:20777/udp"
+      - "${L_PORT}:${L_TROP}/udp"
     depends_on:
       - db
     restart: always
@@ -15,21 +20,21 @@ services:
     container_name: pvDB
     environment:
       MYSQL_DATABASE: PACKETVISION
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_USER: mysqluser
-      MYSQL_PASSWORD: mysqlpass
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./PacketVisionMySQLDump:/PacketVisionMySQLDump
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:${DB_TROP}"
     restart: always
 
   web:
     build: ./PacketVisionWeb
     container_name: pvW
     ports:
-      - "8080:80"
+      - "${W_PORT}:${W_TROP}"
     depends_on:
       - db
     restart: always
@@ -38,7 +43,7 @@ services:
     build: ./PacketVisionWebSocket
     container_name: pvWS
     ports:
-      - "3000:3000"
+      - "${WS_PORT}:${WS_TROP}"
     depends_on:
       - db
     restart: always
@@ -47,11 +52,11 @@ services:
     image: phpmyadmin/phpmyadmin:latest
     container_name: pvPHPMA
     ports:
-      - "8081:80"
+      - "${PHPMA_PORT}:${PHPMA_TROP}"
     environment:
       PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: rootpass
+      PMA_USER: ${PMA_USER}
+      PMA_PASSWORD: ${PMA_PASSWORD}
     depends_on:
       - db
     restart: always
@@ -60,7 +65,7 @@ services:
     image: grafana/grafana
     container_name: pvG
     ports:
-      - "3001:3000"
+      - "${G_PORT}:${G_TROP}"
     volumes:
       - grafana-storage:/var/lib/grafana
     depends_on:
@@ -68,5 +73,5 @@ services:
     restart: always
     
 volumes:
-  grafana-storage:
   mysql_data:
+  grafana-storage:

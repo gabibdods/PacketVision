@@ -3,7 +3,8 @@
         <title>PacketVision</title>
         <meta charset="UTF-8">
         <meta name="viewport" content ="initial-scale=1.0">
-        <link rel="stylesheet" href="includes/stylesheet.css">
+        <link rel="shortcut icon" type="image/icon" href="favicon.png"/>
+        <link rel="stylesheet" href="stylesheet.css">
     </head>
     <body>
         <h1 id="header">Telemetry Dashboard</h1>
@@ -298,6 +299,6 @@
                 </div>
             </div>
         </div>
-        <script src="includes/script.js"></script>
+        <script src="script.js"></script>
     </body>
 </html>

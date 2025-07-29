@@ -26,15 +26,16 @@
 !PacketVisionWeb/
 !PacketVisionWeb/Dockerfile
 !PacketVisionWeb/index.php
+!PacketVisionWeb/functions.php
+!PacketVisionWeb/db.php
+!PacketVisionWeb/api.php
+!PacketVisionWeb/composer.json
+!PacketVisionWeb/composer.lock
 !PacketVisionWeb/wait-for-it.sh
-
-!PacketVisionWeb/includes/
-!PacketVisionWeb/includes/api.php
-!PacketVisionWeb/includes/F1Bold.otf
-!PacketVisionWeb/includes/F1Regular.otf
-!PacketVisionWeb/includes/F1Wide.otf
-!PacketVisionWeb/includes/script.js
-!PacketVisionWeb/includes/stylesheet.css
+!PacketVisionWeb/F1Wide.otf
+!PacketVisionWeb/script.js
+!PacketVisionWeb/stylesheet.css
+!PacketVisionWeb/favicon.png
 
 !PacketVisionWebSocket/
 !PacketVisionWebSocket/Dockerfile
