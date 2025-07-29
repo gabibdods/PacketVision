@@ -1,4 +1,4 @@
-*.md -linguist-documentation
-*.md linguist-detectable
+#*.md -linguist-documentation
+#*.md linguist-detectable
 * license=proprietary
 * noai
