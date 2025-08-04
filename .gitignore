@@ -3,7 +3,12 @@
 
 !.gitattributes
 !.gitignore
+!.gitlab-ci.yml
 !README.md
+
+!.gitlab/
+!.gitlab/sast-ruleset.toml
+
 !License/
 !License/LICENSE.md
 !License/NOTICE.md
@@ -17,28 +22,28 @@
 !init.sql
 !docker-compose.yml
 
-!PacketVisionListener/
-!PacketVisionListener/Dockerfile
-!PacketVisionListener/PacketVisionListener.csproj
-!PacketVisionListener/Program.cs
-!PacketVisionListener/Worker.cs
+!entrypoint/
+!entrypoint/Dockerfile
+!entrypoint/PacketVisionListener.csproj
+!entrypoint/Program.cs
+!entrypoint/Worker.cs
 
-!PacketVisionWeb/
-!PacketVisionWeb/Dockerfile
-!PacketVisionWeb/index.php
-!PacketVisionWeb/functions.php
-!PacketVisionWeb/db.php
-!PacketVisionWeb/api.php
-!PacketVisionWeb/composer.json
-!PacketVisionWeb/composer.lock
-!PacketVisionWeb/wait-for-it.sh
-!PacketVisionWeb/F1Wide.otf
-!PacketVisionWeb/script.js
-!PacketVisionWeb/stylesheet.css
-!PacketVisionWeb/favicon.png
+!frontend/
+!frontend/Dockerfile
+!frontend/index.php
+!frontend/functions.php
+!frontend/db.php
+!frontend/api.php
+!frontend/composer.json
+!frontend/composer.lock
+!frontend/wait-for-it.sh
+!frontend/F1Wide.otf
+!frontend/script.js
+!frontend/stylesheet.css
+!frontend/favicon.png
 
-!PacketVisionWebSocket/
-!PacketVisionWebSocket/Dockerfile
-!PacketVisionWebSocket/package.json
-!PacketVisionWebSocket/package-lock.json
-!PacketVisionWebSocket/websocket.js
+!websocket/
+!websocket/Dockerfile
+!websocket/package.json
+!websocket/package-lock.json
+!websocket/websocket.js

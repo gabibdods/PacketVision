@@ -6,7 +6,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASS: ${MYSQL_PASSWORD}
     build:
-      context: ./PacketVisionListener
+      context: ./entrypoint
       dockerfile: Dockerfile
     container_name: pvL
     ports:
@@ -25,13 +25,13 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./PacketVisionMySQLDump:/PacketVisionMySQLDump
+      - ./dump:/dump
     ports:
       - "${DB_PORT}:${DB_TROP}"
     restart: always
 
   web:
-    build: ./PacketVisionWeb
+    build: ./frontend
     container_name: pvW
     ports:
       - "${W_PORT}:${W_TROP}"
@@ -40,7 +40,7 @@ services:
     restart: always
 
   websocket:
-    build: ./PacketVisionWebSocket
+    build: ./websocket
     container_name: pvWS
     ports:
       - "${WS_PORT}:${WS_TROP}"
