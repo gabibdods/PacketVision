@@ -20,7 +20,7 @@
 !publicPacketDoc.md
 !officialPacketDoc.docx
 !init.sql
-!docker-compose.yml
+!docker-compose.yaml
 
 !entrypoint/
 !entrypoint/Dockerfile
@@ -41,6 +41,9 @@
 !frontend/script.js
 !frontend/stylesheet.css
 !frontend/favicon.png
+
+!openf1/
+!openf1/
 
 !websocket/
 !websocket/Dockerfile

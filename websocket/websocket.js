@@ -18,10 +18,10 @@ if (cluster.isMaster) {
 
     wss.on('connection', async (ws) => {
         const conn = await mysql.createConnection({
-            host: 'db',
-            user: 'mysqluser',
-            password: 'mysqlpass',
-            database: 'PACKETVISION',
+            host: 'pvdb',
+            user: '',
+            password: '',
+            database: '',
         });
 
         let polling = true;
@@ -36,13 +36,9 @@ if (cluster.isMaster) {
 
                 await Promise.all(tables.map(async (table) => {
                     try {
-                        const [rows] = await conn.query(`SELECT *
-                                                         FROM ${table}
-                                                         ORDER BY timestamp DESC
-                                                         LIMIT 1`);
+                        const [rows] = await conn.query(`SELECT * FROM ${table} ORDER BY timestamp DESC LIMIT 1`);
                         result[table] = rows[0] || {};
                     } catch (err) {
-                        console.log('line 45');
                         result[table] = null;
                     }
                 }));

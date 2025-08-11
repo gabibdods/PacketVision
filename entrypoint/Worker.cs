@@ -8,13 +8,12 @@ namespace PacketVisionListener
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var udpPort = Environment.GetEnvironmentVariable("L_PORT")!;
-            var mySqlPort = Environment.GetEnvironmentVariable("DB_PORT");
+            var mySqlDatabase = Environment.GetEnvironmentVariable("MYSQL_DATABASE")!;
             var mySqlUser = Environment.GetEnvironmentVariable("MYSQL_USER");
             var mySqlPass = Environment.GetEnvironmentVariable("MYSQL_PASS");
             
-            using var client = new UdpClient(int.Parse(udpPort));
-            var connectionString = $"Server=db;Port={mySqlPort};Database=PACKETVISION;User={mySqlUser};Password={mySqlPass};";
+            using var client = new UdpClient(20777);
+            var connectionString = $"Server=pvdb;Port=20777;Database={mySqlDatabase};User={mySqlUser};Password={mySqlPass};";
 
             while (!stoppingToken.IsCancellationRequested)
             {

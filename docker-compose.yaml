@@ -1,0 +1,62 @@
+services:
+    pvdb:
+        image: mysql:8
+        container_name: pvdb
+        env_file:
+          - .env
+        expose:
+          - "3306"
+        volumes:
+          - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+          - ./dump:/dump
+        restart: always
+
+    pvls:
+        build: ./entrypoint
+        container_name: pvls
+        env_file:
+          - .env
+        ports:
+          - "20777:20777/udp"
+        depends_on: [pvdb]
+        restart: always
+
+    pvwb:
+        build: ./frontend
+        container_name: pvwb
+        ports:
+          - "8080:80"
+        depends_on: [pvdb]
+        restart: always
+
+    pvsk:
+        build: ./websocket
+        container_name: pvsk
+        ports:
+          - "3000:3000"
+        depends_on: [pvdb]
+        restart: always
+
+    pvpma:
+        image: phpmyadmin/phpmyadmin:latest
+        container_name: pvpma
+        env_file:
+          - .env
+        ports:
+          - "8081:80"
+        depends_on: [pvdb]
+        restart: always
+      
+    pvgr:
+        image: grafana/grafana
+        container_name: pvgr
+        ports:
+          - "3001:3000"
+        volumes:
+          - grafana-storage:/var/lib/grafana
+        depends_on: [pvdb]
+        restart: always
+
+volumes:
+    mysql_data:
+    grafana-storage:
