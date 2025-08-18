@@ -16,34 +16,36 @@
 
 # particular repository ignores:
 
-!Dockerfile
-!publicPacketDoc.md
-!officialPacketDoc.docx
-!init.sql
 !docker-compose.yaml
+!Dockerfile
+!init.sql
+!packet.example
+!packet_doc_official.docx
+!packet_doc_public.md
 
-!entrypoint/
-!entrypoint/Dockerfile
-!entrypoint/PacketVisionListener.csproj
-!entrypoint/Program.cs
-!entrypoint/Worker.cs
+!client/
+!client/Dockerfile
+!client/PacketVisionListener.csproj
+!client/Program.cs
+!client/Worker.cs
 
 !frontend/
-!frontend/Dockerfile
-!frontend/index.php
-!frontend/functions.php
-!frontend/db.php
 !frontend/api.php
 !frontend/composer.json
 !frontend/composer.lock
-!frontend/wait-for-it.sh
+!frontend/db.php
+!frontend/Dockerfile
 !frontend/F1Wide.otf
+!frontend/favicon.png
+!frontend/functions.php
+!frontend/index.php
 !frontend/script.js
 !frontend/stylesheet.css
-!frontend/favicon.png
+!frontend/wait-for-it.sh
 
 !openf1/
-!openf1/
+!openf1/CMakeLists.txt
+!openf1/main.cpp
 
 !websocket/
 !websocket/Dockerfile
